@@ -93,3 +93,72 @@ def q_Hamiltonian(ham,n,s):
         A += tmp
 
     return A
+
+def e_ij(tup, i, j):
+    """
+    This function creates a matrix of any shape with the property that only one element is 1 and all the rest are zero
+    :param tup: This is tuple that defines the shape of the matrix
+    :param i : This is number of the row. Assumes that first row is numbered 1
+    :param j : this is the number of the column. Assumes that the first column is numbered 1
+    """
+    k = zeros(tup)
+    k[i-1, j-1] = 1
+    return k
+
+
+def c_u(u, n, i, j):
+    """
+    This creates a controlled unitary operation on n qubits
+    :param u: Unitary matrix
+    :param n: The number of qubits to be used
+    :param i: the position of control qubit for the controlled operation
+    :param j: the position of target qubit for the controlled operation
+    :return:  the controlled operation
+    """
+    tmp = 1
+    tmp1 = 1
+    term_1 = {
+        "0": id(),
+        "1": e_ij((2, 2), 1, 1)
+    }
+    # What happens when the control qubit is in the zero state
+    label_1 = generatetensorstring(n, i)
+    print(label_1)
+    for qubit in range(len(label_1)):
+        key = label_1[qubit]
+        tmp = kron(tmp, term_1[key])
+    cu_1 = tmp
+    print('cu_1: ', cu_1)
+
+    # What happens when the control bit is in the one state
+
+    term_2 = {
+        "0": id(),
+        "2": u,
+        "1": e_ij((2, 2), 2 , 2)
+    }
+
+    label_2 = controlgatestring(n, ('1', i), ('2', j))
+    print(label_2)
+    for qubit in range(len(label_2)):
+        for digit in label_2[qubit]:
+            tmp1 = kron(tmp1, term_2[digit])
+    cu_2 = tmp1
+    print('cu_2: ', cu_2)
+
+    return cu_1 + cu_2
+
+
+def qft(n):
+    """
+    :param n: The number of qubits
+    :return:  outputs the quantum fourier transform for n qubits
+    """
+    w = exp(1j*2*pi/n)
+    dft = zeros((n, n), dtype=complex)
+    for i in range(0, n):
+        for k in range(0, n):
+            dft[i, k] = pow(w, i*k)
+    return dft*1/sqrt(n)
+
+
