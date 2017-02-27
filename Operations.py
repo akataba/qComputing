@@ -141,10 +141,96 @@ def generateDictKeys(string,n):
        keylist=[string+str(i) for i in range(n)]
        return keylist
 
-def e_ij(tuple,i,j):
-    h = zeros(tuple)
-    h[i,j]=1
-    return h
+def generatehamiltoniantring(n, s):
+    """
+    This generates a string that is used to contruct tensor products terms in Hamiltonian with a certain kind of
+    interaction term. For example suppose we have an ising Hamiltonian with 4 qubits. We generate strings in a
+    list 1100, 0110,0011. The zero will be used to tensor an identity and the 1 will be used to tensor the pauli
+    matrix.
+    :param n: The number of qubits we have in our system
+    :param s: This is a string of 1's that determines how local our hamiltonian is. So a three body interaction
+    means we need '111' or a two body interaction will be '11'
+    :return: Returns a list of strings that will be used to create the Hamiltonian
+    """
+    label = []
+    if isinstance(s, str):
+        for i in range(0, n):
+            strs = s
+            strs = strs.ljust(n-i, '0')
+            strs = strs.rjust(n, '0')
+            label.append(strs)
+    else:
+        print('Please enter string for second variable and integer for first')
+    return label
+
+
+def controlgatestring(n, control_pos1, target_pos2):
+    """
+    :param n: The length of the string
+    :param control_pos1: This must be a tuple that specifies which qubit is control and its position
+     (string,number)
+    :param target_pos2:  This must be a tuple that specifies which qubit is target and its position
+    :return:
+    """
+    out = ''
+
+    if isinstance(control_pos1, tuple) and isinstance(target_pos2, tuple):
+        control, pos1 = control_pos1
+        target, pos2 = target_pos2
+        for i in range(0, n):
+            if i == pos1-1:
+                out += control
+            elif i == pos2-1:
+                out += target
+            else:
+                out += '0'
+    else:
+        print("Pleas make sure that you have provided a tuple with the 1st arg being a string and 2nd being a number")
+
+    return out
+
+
+def generatetensorstring(n, *args):
+    """
+    This is a function like generatehamiltonianstring except it allows for the possibility that we could have
+    different operators in the interaction placed at arbitrary place. Plus this does not generate a list
+    but just one string. IZIIXIY needs string '0100203'. Can't handle a term like 'IZZZ' because we need
+    string '0111' because for each  operator other than identity label is incremented.
+    :param n: The number of qubits in the system
+    :param args: list of arguments stating positions for where numbers other than 0 should go.
+    :return: returns a string
+    """
+    out = ''
+    label = 0
+    arg = array(args) - 1
+
+    for i in range(0, n):
+        if i in arg:
+            label += 1
+            out += str(label)
+        else:
+            out += '0'
+    return out
+
+
+def partial_trace(n, m, k):
+    """
+    :param n: Number of qubits in the system
+    :param m: The position of the qubit to trace
+    :param k: label for the kth basis for the traced out qubit
+    :return: Returns the matrix that helps trace out the mth qubit
+    """
+    tmp = 1
+    tensor_label = generatetensorstring(n, m)
+
+    terms = {"0": g.id(), "1": g.e_ij((2, 1), k, 1)}
+
+    for i in tensor_label:
+        if tensor_label[int(i)] == '1':
+            tmp = kron(tmp, terms[i])
+        else:
+            tmp = kron(tmp, terms[i])
+    return tmp
 
 
 
