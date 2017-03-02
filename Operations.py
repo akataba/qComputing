@@ -113,6 +113,8 @@ def write_to_file(name,*args):
 
 def load_data(name,marker1,xlabel='',ylabel='',val=0):
     """
+    This function has two uses, it either loads the data and plots it if val=1 or it just gets the data from
+     the data file and puts it into arrays which it returns
     :param name: String varible containing name of the file
     :param val: Should be 1 to load and plot data else throw error message else just loads data
     :param xlabel: xlabel for the graph
@@ -127,6 +129,8 @@ def load_data(name,marker1,xlabel='',ylabel='',val=0):
         plt.scatter(data_1,data_2, label = marker1,color ='k')
         plt.legend()
         plt.show()
+    else:
+        return data_1, data_2
 
 def generateDictKeys(string,n):
     """
