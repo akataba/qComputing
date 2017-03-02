@@ -1,34 +1,37 @@
-from numpy import array,sqrt,kron,zeros
+from numpy import array, sqrt, kron, zeros, pi
+from Operations import generatehamiltoniantring, generatetensorstring, controlgatestring
 from scipy.linalg import expm
-import Operations as op
+from cmath import exp
+
 
 def x():
-    out = array([[0,1],[1,0]])
+    out = array([[0, 1], [1, 0]])
     return out
 
 
 def h():
-    out1 = 1/sqrt(2)*array([[1,1],[1,-1]])
+    out1 = 1/sqrt(2)*array([[1, 1], [1, -1]])
     return out1
 
 
 def id():
-    out2 = array([[1,0],[0,1]])
+    out2 = array([[1, 0], [0, 1]])
     return out2
 
+
 def y():
-   out3 = array([[0,-1j],[1j,0]])
+   out3 = array([[0, -1j], [1j, 0]])
    return out3
 
 
 def z():
-    out4 = array([[1,0],[0,-1]])
+    out4 = array([[1, 0], [0, -1]])
     return out4
+
 
 def cnot():
     out5 = array([[1, 0, 0, 0, ], [0, 1, 0, 0, ], [0, 0, 1, 0], [0, 0, 0, 1]])
     return out5
-
 
 def cz():
     out6 = array([[1, 0, 0, 0, ], [0, 1, 0, 0, ], [0, 0, 1, 0], [0, 0, 0, -1]])
@@ -55,52 +58,48 @@ def r_i(theta):
     return out9
 
 def b1():
-    out = array([[1,0],[0,0]])
-    return out
-def b2():
-    out =array([[0,1],[0,0]])
-    return out
-def b3():
-    out =array([[0,0],[1,0]])
-    return out
-def b4():
-    out = array([[0,0],[0,1]])
+    out = array([[1, 0], [0, 0]])
     return out
 
-def q_Hamiltonian(ham,n,s):
+
+def b2():
+    out = array([[0, 1], [0, 0]])
+    return out
+
+
+def b3():
+    out = array([[0, 0], [1, 0]])
+    return out
+
+
+def b4():
+    out = array([[0, 0], [0, 1]])
+    return out
+
+
+def q_Hamiltonian(ham, n, s):
     """
     :param ham: hamiltonian by which the qubits will evolve by
     :param s : must be a string of ones e.g 010 represents id (tensor)ham(tensor)id while 10 represents ham(tensor) id
+    :param n : The length of the string. This determines how many zeros there will be
     :return:
     """
 
-    label =[]
-    A = zeros((pow(2,n),pow(2,n)),dtype = complex)
-    for i in range(0,n):
-        str = s
-        str = str.ljust(n-i,'0')
-        str = str.rjust(n,'0')
-        label.append(str)
-
+    label = generatehamiltoniantring(n, s)
+    a = zeros((pow(2, n), pow(2, n)), dtype=complex)
     terms = {
-         "0" : id(),
-         "1" : ham
+         "0": id(),
+         "1": ham
      }
     for qubit in range(len(label)):
         tmp = 1
         for digit in label[qubit]:
-            tmp = kron(tmp,terms[digit])
-        A += tmp
+            tmp = kron(tmp, terms[digit])
+        a += tmp
+    return a
 
-    return A
 
 def e_ij(tup, i, j):
-    """
-    This function creates a matrix of any shape with the property that only one element is 1 and all the rest are zero
-    :param tup: This is tuple that defines the shape of the matrix
-    :param i : This is number of the row. Assumes that first row is numbered 1
-    :param j : this is the number of the column. Assumes that the first column is numbered 1
-    """
     k = zeros(tup)
     k[i-1, j-1] = 1
     return k
@@ -160,5 +159,9 @@ def qft(n):
         for k in range(0, n):
             dft[i, k] = pow(w, i*k)
     return dft*1/sqrt(n)
+
+
+
+
 
 
