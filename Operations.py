@@ -2,19 +2,17 @@ from numpy import zeros, dot,savetxt,array,loadtxt
 import matplotlib.pyplot as plt
 import sys
 
-sys.path.insert(1,'/home/amara/Documents/"Python Files"/PauliChannelPaper')
+sys.path.insert(1, '/home/amara/Documents/"Python Files"/PauliChannelPaper')
 
 
-
-
-def checknormkraus(k,n):
+def checknormkraus(k, n):
     """
     Makes sure that the kraus matrices are properly normalized and therefore preserve probability
     :param k: A 3 dimensional array of shape(m,2^n,2^n). m is the number of kraus matrices
     :param n: The number of qubits
     :return: Should return identity
     """
-    out = zeros((pow(2,n),pow(2,n)),dtype = complex)
+    out = zeros((pow(2, n), pow(2, n)), dtype=complex)
     for x in range(len(k)):
         out += dot(ctranspose(k[x]), k[x])
     return out
@@ -47,20 +45,22 @@ def unblockshaped(arr, h, w):
                .swapaxes(1,2)
                .reshape(h, w))
 
-def dec2base(n,base):
+
+def dec2base(n, base):
     """
     Gets gives you a string in base less than 20
     :param n: The number you have
     :param base: The base you want
     :return:  The string containing giving the base m representation
     """
-    convertString = "0123456789ABCDEF"
+    convertstring = "0123456789ABCDEF"
     if n < base:
-        return convertString[n]
+        return convertstring[n]
     else:
-        return dec2base(n // base, base) + convertString[n % base]
+        return dec2base(n // base, base) + convertstring[n % base]
 
-def createlabel(q,n):
+
+def createlabel(q, n):
     """
     Create a string of labels for making kraus matrices
     :param q: Number of qubits also the length of the label string
@@ -69,19 +69,20 @@ def createlabel(q,n):
     """
     # When using dec2base function make sure to pad the string with the right number of zeros e.g for base 3 dec2base
     # gives 1 rather than 01 if we were dealing with 2 qubits.
-    # The number of krause kraus matrices or labels is  n^q
+    # The number of kraus matrices or labels is  n^q
 
-    label =[]
-    for i in range(pow(n,q)):
-        label.append(dec2base(i,n))
+    label = []
+    for i in range(pow(n, q)):
+        label.append(dec2base(i, n))
 
     # Next we make sure that each element in the label list has length the number of qubits if not add a zero
     for x in range(len(label)):
         if len(label[x]) < q:
-            label[x]=label[x].zfill(q)
+            label[x] = label[x].zfill(q)
         else:
             break
     return label
+
 
 def ctranspose(A):
     """
@@ -91,15 +92,15 @@ def ctranspose(A):
     out = A.conjugate().transpose()
     return out
 
+
 def frange(start, end, step):
     tmp = start
-    while(tmp < end):
+    while tmp < end:
         yield tmp
         tmp += step
 
 
-
-def write_to_file(name,*args):
+def write_to_file(name, *args):
     """
     :param name: A string that is the name of the file to which the data will be written to
     :param args: list of arguments with entries being data e.g arg[0] = time where time is a list of times
@@ -107,15 +108,17 @@ def write_to_file(name,*args):
     """
 
     data = array(args).T
-    file = open(name,'w+')
-    savetxt(name,data,fmt=['%.5f','%.5f'])
+    file = open(name, 'w+')
+    savetxt(name, data, fmt=['%.5f', '%.5f'])
     file.close()
 
-def load_data(name,marker1,xlabel='',ylabel='',val=0):
+
+def load_data(name, marker1, xlabel='', ylabel='', val=0):
     """
     This function has two uses, it either loads the data and plots it if val=1 or it just gets the data from
      the data file and puts it into arrays which it returns
     :param name: String varible containing name of the file
+    :param marker1: This sets the marker used to create points on scatter plot
     :param val: Should be 1 to load and plot data else throw error message else just loads data
     :param xlabel: xlabel for the graph
     :param ylabel: ylabel for the graph
@@ -132,7 +135,8 @@ def load_data(name,marker1,xlabel='',ylabel='',val=0):
     else:
         return data_1, data_2
 
-def generateDictKeys(string,n):
+
+def generateDictKeys(string, n):
     """
     This was written as a quick and easy way of producing keys for a dictionary.
     :param string: Base String on which to attach numerals
@@ -144,6 +148,7 @@ def generateDictKeys(string,n):
     else:
        keylist=[string+str(i) for i in range(n)]
        return keylist
+
 
 def generatehamiltoniantring(n, s):
     """

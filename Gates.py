@@ -1,7 +1,8 @@
 from numpy import array, sqrt, kron, zeros, pi
-from Operations import generatehamiltoniantring, generatetensorstring, controlgatestring
+from Operations import generatehamiltoniantring, generatetensorstring, controlgatestring,ctranspose
 from scipy.linalg import expm
 from cmath import exp
+from sympy import Q
 
 
 def x():
@@ -33,6 +34,7 @@ def cnot():
     out5 = array([[1, 0, 0, 0, ], [0, 1, 0, 0, ], [0, 0, 1, 0], [0, 0, 0, 1]])
     return out5
 
+
 def cz():
     out6 = array([[1, 0, 0, 0, ], [0, 1, 0, 0, ], [0, 0, 1, 0], [0, 0, 0, -1]])
     return out6
@@ -56,6 +58,7 @@ def r_z(theta):
 def r_i(theta):
     out9 = expm(-1j*theta*id())
     return out9
+
 
 def b1():
     out = array([[1, 0], [0, 0]])
@@ -161,7 +164,16 @@ def qft(n):
     return dft*1/sqrt(n)
 
 
+def bakersmap(n):
+    """
+    :param n: The number of qubits
+    :return:
+    """
+    q = qft(n)
+    q_1 = qft(n/2)
+    out = ctranspose(q)*kron(id(), q_1)
 
+    return out
 
 
 
