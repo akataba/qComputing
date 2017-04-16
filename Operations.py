@@ -1,4 +1,4 @@
-from numpy import zeros, dot,savetxt,array,loadtxt
+from numpy import zeros, dot,savetxt,array,loadtxt, kron, absolute, cos, sin, arccos, arcsin, random, pi, exp, conjugate
 import matplotlib.pyplot as plt
 import sys
 
@@ -240,6 +240,53 @@ def partial_trace(n, m, k):
         else:
             tmp = kron(tmp, terms[i])
     return tmp
+
+def subblock(u,p1,p2):
+    """
+    :param u: In put matrix
+    :param p1: this is a tuple that determines the top left element of sub-block
+    :param p2: this is a tuple that determines the bottom right element of sub-block
+    :return: Returns the sub-block
+    """
+    if isinstance(p1,tuple) and isinstance(p2, tuple):
+        r, c = p1
+        r1, c1 = p2
+        out = u[r:r1, c:c1]
+    else:
+        print("Please enter tuple for second and third argument")
+
+    return out
+
+
+def generateUnitary():
+    """
+    :return: Returns a random 2 by 2  unitary matrix
+    """
+    u = zeros((2,2), dtype=complex)
+    zeta = random.random() # result after calculating sine and cosine
+    theta = arcsin(zeta)
+    phi = random.uniform(0,2*pi) # angle for first phase
+    chi = random.uniform(0,2*pi) # angle for second phase
+    rho = random.uniform(0,2*pi)
+
+    a = exp(1j*phi)*cos(theta)
+    b = exp(1j*chi)*sin(theta)
+    u[0,0] = a
+    u[0,1] = b
+    u[1,0] = -conjugate(b)
+    u[1,1] = conjugate(a)
+
+    return dot(exp(1j*rho), u)
+
+
+def superkron(*args):
+
+    out = 1
+    for i in range(len(args)):
+        out = kron(out,args[i])
+
+    return out
+
 
 
 
