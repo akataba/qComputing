@@ -1,8 +1,9 @@
 import NoisyEvolution as ne
-import  numpy as np
+import numpy as np
 import Operations as op
 from scipy.linalg import expm
-
+import Gates as g
+from lea import *
 
 class Qubit(object):
 
@@ -41,6 +42,21 @@ class Qubit(object):
         :return:  Returns the transformed density matrix after the operation
         """
         self.state = np.dot(o, np.dot(self.state, o))
+
+    def measure(self):
+        """
+        :return: Density matrix after a measurement
+        """
+        p0 = np.trace(np.dot(self.state, g.b1()))
+        p1 = np.trace(np.dot(self.state, g.b4()))
+        outcome = {'0': p0, '1': p1}
+        picked_obj = Lea.fromValFreqsDict(outcome)
+        picked_state = picked_obj.random()
+
+        if picked_state == '0':
+            self.state = g.b1()
+        else:
+            self.state = g.b4()
 
 
 class MultiQubit(Qubit):
