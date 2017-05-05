@@ -1,6 +1,8 @@
 from numpy import zeros, dot,savetxt,array,loadtxt, kron, absolute, cos, sin, arccos, arcsin, random, pi, exp, conjugate
 import matplotlib.pyplot as plt
 import sys
+import qutip as qt
+import Gates as g
 
 sys.path.insert(1, '/home/amara/Documents/"Python Files"/PauliChannelPaper')
 
@@ -241,14 +243,15 @@ def partial_trace(n, m, k):
             tmp = kron(tmp, terms[i])
     return tmp
 
-def subblock(u,p1,p2):
+
+def subblock(u, p1, p2):
     """
     :param u: In put matrix
     :param p1: this is a tuple that determines the top left element of sub-block
     :param p2: this is a tuple that determines the bottom right element of sub-block
     :return: Returns the sub-block
     """
-    if isinstance(p1,tuple) and isinstance(p2, tuple):
+    if isinstance(p1, tuple) and isinstance(p2, tuple):
         r, c = p1
         r1, c1 = p2
         out = u[r:r1, c:c1]
@@ -263,29 +266,60 @@ def generateUnitary():
     :return: Returns a random 2 by 2  unitary matrix
     """
     u = zeros((2,2), dtype=complex)
-    zeta = random.random() # result after calculating sine and cosine
+    zeta = random.random()  # result after calculating sine and cosine
     theta = arcsin(zeta)
-    phi = random.uniform(0,2*pi) # angle for first phase
-    chi = random.uniform(0,2*pi) # angle for second phase
-    rho = random.uniform(0,2*pi)
+    phi = random.uniform(0, 2*pi)  # angle for first phase
+    chi = random.uniform(0, 2*pi)  # angle for second phase
+    rho = random.uniform(0, 2*pi)
 
     a = exp(1j*phi)*cos(theta)
     b = exp(1j*chi)*sin(theta)
-    u[0,0] = a
-    u[0,1] = b
-    u[1,0] = -conjugate(b)
-    u[1,1] = conjugate(a)
+    u[0, 0] = a
+    u[0, 1] = b
+    u[1, 0] = -conjugate(b)
+    u[1, 1] = conjugate(a)
 
     return dot(exp(1j*rho), u)
 
 
-def superkron(*args):
+def superkron(*args, val=0,  string=''):
+    """
+    This generalization of kron can be used in 2 ways. It can straight forwardly take the tensor product of
+    operators given the arguments i.e superkron(I,Z,X) will return the tensor product of I, Z and X.
+    It can also do something more general. It can accept a dictionary of operators and a string variable
+    that specifies in which order the operators in the dictionary should be tensored. E.G
+    operdict = {'0': I, '1': X} and  string = '010. Then superkron(operdict, val=1,string,)
+    produces tensor product superkron(I,X,I)
+
+    :param args: List of operators to calculate tensor product of
+    :param val: A val=0 makes function calculate tensor product of operators given, val=1 adds extra
+    bells and whistles described in doc string above
+    :param string: The order in which operators given in the operdict dictionary will be tensored
+    :return: The tensor product of operators
+    """
 
     out = 1
-    for i in range(len(args)):
-        out = kron(out,args[i])
-
+    if val == 0:
+        for i in range(len(args)):
+            out = kron(out, args[i])
+    else:
+        for digit in string:
+            out = kron(out, args[0][digit])
     return out
+
+
+def makeQobj(*args):
+    """
+    :param args: This is a list of matrices than must be turned into Qobj in order that they can be used in the
+    qutip package
+    :return: returns list of Qobj in the order in which they were created. E.g makeQobj(A,B) returns a list
+    l = [Qobj(A),Qobj(B)]
+    """
+    l = []
+    for i in range(len(args)):
+        l.append(qt.Qobj(args[i]))
+
+    return l
 
 
 
