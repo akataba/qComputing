@@ -1,5 +1,5 @@
 from numpy import array, sqrt, kron, zeros, pi
-from Operations import generatehamiltoniantring, generatetensorstring, controlgatestring,ctranspose
+import Operations as op
 from scipy.linalg import expm
 from cmath import exp
 from sympy import Q
@@ -88,7 +88,7 @@ def q_Hamiltonian(ham, n, s):
     :return:
     """
 
-    label = generatehamiltoniantring(n, s)
+    label = op.generatehamiltoniantring(n, s)
     a = zeros((pow(2, n), pow(2, n)), dtype=complex)
     terms = {
          "0": id(),
@@ -124,7 +124,7 @@ def c_u(u, n, i, j):
         "1": e_ij((2, 2), 1, 1)
     }
     # What happens when the control qubit is in the zero state
-    label_1 = generatetensorstring(n, i)
+    label_1 = op.generatetensorstring(n, i)
     print(label_1)
     for qubit in range(len(label_1)):
         key = label_1[qubit]
@@ -140,7 +140,7 @@ def c_u(u, n, i, j):
         "1": e_ij((2, 2), 2 , 2)
     }
 
-    label_2 = controlgatestring(n, ('1', i), ('2', j))
+    label_2 = op.controlgatestring(n, ('1', i), ('2', j))
     print(label_2)
     for qubit in range(len(label_2)):
         for digit in label_2[qubit]:
@@ -171,7 +171,7 @@ def bakersmap(n):
     """
     q = qft(n)
     q_1 = qft(n/2)
-    out = ctranspose(q)*kron(id(), q_1)
+    out = op.ctranspose(q)*kron(id(), q_1)
 
     return out
 
