@@ -5,58 +5,56 @@ import matplotlib.pyplot as plt
 class Data(object):
 
         def __init__(self):
-            self.d = []
+            self.d = {}
             self.label = ''
             self.ylabel = ''
-            self.color = ''
+            self.xlabel = ''
+            self.color = 'g'
             self.legend = ''
-            self.average = 0
-            self.variance = 0
-            self.standard_deviation = 0
-            self.data_median = 0
+            self.average = {}
+            self.variance = {}
+            self.standard_deviation = {}
+            self.data_median = {}
             self.data_summary = {}
 
-        @property
-        def mean(self):
-            self.average = st.mean(self.d)
-            return st.mean(self.d)
+        def mean(self, key):
+            self.average[key] = st.mean(self.d[key])
+            return st.mean(self.d[key])
 
-        @property
-        def median(self):
-            self.data_median = st.median(self.d)
-            return st.median(self.d)
+        def median(self, key):
+            self.data_median[key] = st.median(self.d[key])
+            return st.median(self.d[key])
 
-        @property
-        def stddev(self):
-            self.standard_deviation = st.stdev(self.d)
-            return st.stdev(self.d)
+        def stddev(self, key):
+            self.standard_deviation[key] = st.stdev(self.d[key])
+            return st.stdev(self.d[key])
 
-        @property
-        def var(self):
-            self.variance = st.variance(self.d)
-            return st.variance(self.d)
+        def var(self, key):
+            self.variance[key] = st.variance(self.d[key])
+            return st.variance(self.d[key])
 
-        def color(self, c):
-            if isinstance(c, str):
-                self.color = c
+        def add(self, key, x):
+            if key in self.d:
+                self.d[key].append(x)
+            else:
+                self.d[key] = [x]
 
-        def label(self, x):
-            if isinstance(x, str):
-                self.label = x
+        def data(self, key):
+            return self.d[key]
 
-        def add(self, x):
-            self.d.append(x)
-
-        @property
-        def data(self):
-            return self.d
-
-        def graph(self, data_2, xlabel=''):
-            plt.xlabel(xlabel)
+        def graph(self, x_axis, *args):
+            plt.xlabel(self.xlabel)
             plt.ylabel(self.ylabel)
-            plt.plot(data_2, self.d, self.color, label=self.label)
+            for label in range(0, len(args)):
+                plt.plot(x_axis, self.d[args[label]], self.color, label=self.label)
             plt.show()
 
-        def addlist(self, l):
-            self.d.extend(l)
+        def addlist(self, key, l):
+            if isinstance(key, str):
+                self.d[key] = l
 
+        def delete(self, key=''):
+            if key != '':
+                self.d[key] = []
+            else:
+                self.d.clear()
