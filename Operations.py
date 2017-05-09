@@ -1,4 +1,5 @@
 from numpy import zeros, dot,savetxt,array,loadtxt, kron, absolute, cos, sin, arccos, arcsin, random, pi, exp, conjugate
+from numpy import ndarray
 import matplotlib.pyplot as plt
 import sys
 import qutip as qt
@@ -315,13 +316,19 @@ def makeQobj(*args):
     :return: returns list of Qobj in the order in which they were created. E.g makeQobj(A,B) returns a list
     l = [Qobj(A),Qobj(B)]
     """
-    l = []
-    for i in range(len(args)):
-        l.append(qt.Qobj(args[i]))
+    try:
+        if isinstance(*args, list):
+            l = [qt.Qobj(args[0][i]) for i in range(len(args[0]))]
+        elif isinstance(*args, dict):
+            l = {name: qt.Qobj(args[0][name])for name in args[0]}
+        else:
+            l = qt.Qobj(args[0])
+        return l
+    except TypeError:
+        print("The input must be a list or dictionary of operators or a single operator")
 
-    return l
+if __name__ == '__main__':
+    k = [g.b1(), g.b4(), g.x()]
+    m = {'b1': g.b1(), 'b4': g.b4(), 'x': g.x()}
 
-
-
-
-
+    print(makeQobj(m))
