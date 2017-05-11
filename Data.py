@@ -1,15 +1,16 @@
 import statistics as st
 import matplotlib.pyplot as plt
+from random import randint
 
 
 class Data(object):
 
         def __init__(self):
             self.d = {}
-            self.label = ''
+            self.label = {}
             self.ylabel = ''
             self.xlabel = ''
-            self.color = 'g'
+            self.color = {}
             self.legend = ''
             self.average = {}
             self.variance = {}
@@ -42,12 +43,21 @@ class Data(object):
         def data(self, key):
             return self.d[key]
 
+        def add_label(self, data_key, data_label):
+            self.label[data_key] = data_key
+
+        def get_colors(self):
+            for label in self.d:
+                self.color[label] = '#%06X' % randint(0, 0xFFFFFF)
+
         def graph(self, x_axis, *args):
             plt.xlabel(self.xlabel)
             plt.ylabel(self.ylabel)
             for label in range(0, len(args)):
-                plt.plot(x_axis, self.d[args[label]], self.color, label=self.label)
-            plt.show()
+                #plt.figure()
+                plt.plot(x_axis, self.d[args[label]], self.color[args[label]], label=self.label[args[label]])
+                plt.legend()
+                plt.show()
 
         def addlist(self, key, l):
             if isinstance(key, str):
