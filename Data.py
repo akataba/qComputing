@@ -44,20 +44,27 @@ class Data(object):
             return self.d[key]
 
         def add_label(self, data_key, data_label):
-            self.label[data_key] = data_key
+            self.label[data_key] = data_label
 
         def get_colors(self):
             for label in self.d:
                 self.color[label] = '#%06X' % randint(0, 0xFFFFFF)
 
-        def graph(self, x_axis, *args):
+        def graph(self, x_axis, *args, val=0):
             plt.xlabel(self.xlabel)
             plt.ylabel(self.ylabel)
-            for label in range(0, len(args)):
-                #plt.figure()
-                plt.plot(x_axis, self.d[args[label]], self.color[args[label]], label=self.label[args[label]])
-                plt.legend()
-                plt.show()
+            if val == 0:
+                for label in range(0, len(args)):
+                    #plt.figure()
+                    plt.plot(x_axis, self.d[args[label]], self.color[args[label]], label=self.label[args[label]])
+                    plt.legend()
+                    plt.show()
+            elif val == 1:
+                for l in self.label:
+                    plt.plot(x_axis, self.d[self.label[l]], self.color[self.label[l]], label=self.label[l])
+                    plt.legend()
+                    plt.show()
+
 
         def addlist(self, key, l):
             if isinstance(key, str):
