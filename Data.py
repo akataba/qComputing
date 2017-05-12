@@ -13,6 +13,7 @@ class Data(object):
             self.color = {}  # This is dictionary of colors for each data set
             self.legend = ''
             self.average = {}
+            self.dataset_average = {}
             self.variance = {}
             self.standard_deviation = {}
             self.data_median = {}
@@ -25,6 +26,18 @@ class Data(object):
             """
             self.average[key] = st.mean(self.d[key])
             return st.mean(self.d[key])
+
+        def dataset_mean(self, set_av):
+            """
+            :return:
+            """
+            temp = []
+            self.dataset_average[set_av] = [0]
+            for key in self.d:
+                temp.append(self.d[key])
+            temp = list(map(sum, zip(*temp)))
+            k = list(map(lambda x: x*1/len(self.d), temp))
+            self.dataset_average[set_av] = k
 
         def median(self, key):
             """
@@ -98,15 +111,22 @@ class Data(object):
             plt.ylabel(self.ylabel)
             if val == 0:
                 for label in range(0, len(args)):
-                    #plt.figure()
                     plt.plot(x_axis, self.d[args[label]], self.color[args[label]], label=self.label[args[label]])
                     plt.legend()
                     plt.show()
             elif val == 1:
+                plt.figure()
                 for l in self.label:
                     plt.plot(x_axis, self.d[self.label[l]], self.color[self.label[l]], label=self.label[l])
                     plt.legend()
                     plt.show()
+
+        def graph_average(self, x_axis, key):
+            plt.xlabel(self.xlabel)
+            plt.ylabel(self.ylabel)
+            plt.plot(x_axis, self.dataset_average[key], self.color['block0'], label=key)
+            plt.legend()
+            plt.show()
 
         def addlist(self, key, l):
             if isinstance(key, str):
