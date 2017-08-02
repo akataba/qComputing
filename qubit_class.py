@@ -5,6 +5,7 @@ from scipy.linalg import expm
 import Gates as g
 from lea import *
 
+
 class Qubit(object):
 
     def __init__(self, value):
@@ -13,7 +14,7 @@ class Qubit(object):
         :return: Returns the state of the qubit
         """
         if value == 0:
-            self.state = np.array([[1, 0],   [0,0]])
+            self.state = np.array([[1, 0], [0, 0]])
         elif value == 1:
             self.state = np.array([[0, 0], [0, 1]])
         else:
@@ -49,7 +50,7 @@ class Qubit(object):
         """
         p0 = np.trace(np.dot(self.state, g.b1()))
         p1 = np.trace(np.dot(self.state, g.b4()))
-        outcome = {'0': p0, '1': p1}
+        outcome = {'0': p0*100, '1': p1*100}
         picked_obj = Lea.fromValFreqsDict(outcome)
         picked_state = picked_obj.random()
 
