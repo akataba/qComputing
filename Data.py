@@ -29,15 +29,15 @@ class Data(object):
 
         def dataset_mean(self, set_av):
             """
+            :param set_av: This is the key value for the average of the data set
             :return:
             """
             temp = []
             self.dataset_average[set_av] = [0]
             for key in self.d:
                 temp.append(self.d[key])
-            temp = list(map(sum, zip(*temp)))
-            k = list(map(lambda x: x*1/len(self.d), temp))
-            self.dataset_average[set_av] = k
+            m = list(map(st.mean, zip(*temp)))
+            self.dataset_average[set_av] = m
 
         def median(self, key):
             """
@@ -54,6 +54,14 @@ class Data(object):
             """
             self.standard_deviation[key] = st.stdev(self.d[key])
             return st.stdev(self.d[key])
+
+        def dataset_stddev(self, set_stddev):
+            temp = []
+            self.standard_deviation[set_stddev] = [0]
+            for key in self.d:
+                temp.append(self.d[key])
+            m = list(map(st.stdev, zip(*temp)))
+            self.standard_deviation[set_stddev] = m
 
         def var(self, key):
             """
@@ -122,9 +130,18 @@ class Data(object):
                     plt.show()
 
         def graph_average(self, x_axis, key):
+            dict_key = list(self.d.keys())
             plt.xlabel(self.xlabel)
             plt.ylabel(self.ylabel)
-            plt.plot(x_axis, self.dataset_average[key], self.color['block0'], label=key)
+            plt.plot(x_axis, self.dataset_average[key], self.color[dict_key[0]], label=key)
+            plt.legend()
+            plt.show()
+
+        def graph_errorbars(self, x_axis, key, key_1):
+            plt.xlabel(self.xlabel)
+            plt.ylabel(self.ylabel)
+            plt.errorbar(x_axis, self.dataset_average[key],
+                         yerr=self.standard_deviation[key_1], fmt='o', label=key_1)
             plt.legend()
             plt.show()
 
@@ -137,3 +154,21 @@ class Data(object):
                 self.d[key] = []
             else:
                 self.d.clear()
+
+
+if __name__ == "__main__":
+    k = [randint(0, 20) for i in range(20)]
+    k1 = [randint(0, 20) for i in range(20)]
+    k2 = [randint(0, 20) for i in range(20)]
+    data = Data()
+    data.d['k'] = k
+    data.d['k1'] = k1
+    data.d['k2'] = k2
+    print(len(data))
+
+    data.dataset_mean('average')
+    data.dataset_stddev('av')
+    data.graph_errorbars(list(range(0, 20)), 'average', 'av')
+
+
+
