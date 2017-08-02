@@ -127,7 +127,7 @@ def load_data(name, marker1, xlabel='', ylabel='', val=0):
     :param ylabel: ylabel for the graph
     :return:
     """
-    data_1,data_2 = loadtxt(name,dtype=float,unpack=True)
+    data_1, data_2 = loadtxt(name, dtype=float, unpack=True)
 
     if val == 1:
         plt.xlabel(xlabel)
@@ -139,21 +139,24 @@ def load_data(name, marker1, xlabel='', ylabel='', val=0):
         return data_1, data_2
 
 
-def generateDictKeys(string, n):
+def generateDictKeys(string, n,step=1):
     """
     This was written as a quick and easy way of producing keys for a dictionary.
     :param string: Base String on which to attach numerals
     :param n: Number of strings to generate with '{}{}'.format(string,n) being the last string generated
     :return: yields strings like "a1" or "a2" if string= 'a' and n>2
     """
-    if type(string) != str or  type(n) != int:
+    if type(string) != str or type(n) != int:
         raise ValueError('Please input string and integer for first and second argument')
+    elif step ==1:
+        keylist = [string+str(i) for i in range(n)]
+        return keylist
     else:
-       keylist=[string+str(i) for i in range(n)]
-       return keylist
+        keylist = [string+str(i) for i in range(0, n*step, step)]
+        return keylist
 
 
-def generatehamiltoniantring(n, s):
+def generatehamiltoniantring(n, s, onestring = None, pos = None, pad = None):
     """
     This generates a string that is used to contruct tensor products terms in Hamiltonian with a certain kind of
     interaction term. For example suppose we have an ising Hamiltonian with 4 qubits. We generate strings in a
@@ -165,23 +168,30 @@ def generatehamiltoniantring(n, s):
     :return: Returns a list of strings that will be used to create the Hamiltonian
     """
     label = []
-    if isinstance(s, str):
-        for i in range(0, n):
-            strs = s
-            strs = strs.ljust(n-i, '0')
-            strs = strs.rjust(n, '0')
-            label.append(strs)
+    if onestring is None:
+        if isinstance(s, str):
+            for i in range(0, n):
+                strs = s
+                strs = strs.ljust(n-i, '0')
+                strs = strs.rjust(n, '0')
+                label.append(strs)
+        else:
+            print('Please enter string for second variable and integer for first')
+        return label
     else:
-        print('Please enter string for second variable and integer for first')
-    return label
+        strs = s
+        strs = strs.ljust(n - pos, pad)
+        strs = strs.rjust(n, pad)
+        return strs
 
 
-def controlgatestring(n, control_pos1, target_pos2):
+def controlgatestring(n, control_pos1, target_pos2, additionaloptstring = ''):
     """
     :param n: The length of the string
     :param control_pos1: This must be a tuple that specifies which qubit is control and its position
      (string,number)
     :param target_pos2:  This must be a tuple that specifies which qubit is target and its position
+    :param additionaloptstring: Gives the user freedom to add string unique string after second position
     :return:
     """
     out = ''
@@ -194,10 +204,12 @@ def controlgatestring(n, control_pos1, target_pos2):
                 out += control
             elif i == pos2-1:
                 out += target
+            elif additionaloptstring != '' and i > pos2-1:
+                out += additionaloptstring
             else:
                 out += '0'
     else:
-        print("Pleas make sure that you have provided a tuple with the 1st arg being a string and 2nd being a number")
+        print("Please make sure that you have provided a tuple with the 1st arg being a string and 2nd being a number")
 
     return out
 
@@ -327,8 +339,33 @@ def makeQobj(*args):
     except TypeError:
         print("The input must be a list or dictionary of operators or a single operator")
 
+
+def direct_sum(matrices):
+    """
+    :param matrices: List of matrices
+    :return: The direct sum of the matrices
+    """
+    temp = []
+    for m in matrices:
+        temp.append(m.shape)
+    M = zeros(tuple(map(sum, zip(*temp))), dtype=complex)
+    M[:matrices[0].shape[0], :matrices[0].shape[1]] = matrices[0]
+    for l in range(0, len(matrices), 2):
+        if l != len(matrices)-1:
+            M[matrices[l].shape[0]:matrices[l].shape[0] + matrices[l+1].shape[0],
+            matrices[l].shape[1]:matrices[l].shape[1] + matrices[l+1].shape[1]] = matrices[l+1]
+        else:
+            M[M.shape[0]-matrices[l].shape[0]:, M.shape[1]-matrices[l].shape[1]:] = matrices[l]
+    return M
+
+
+
 if __name__ == '__main__':
-    k = [g.b1(), g.b4(), g.x()]
+    k = [g.z(), g.y(), g.x()]
     m = {'b1': g.b1(), 'b4': g.b4(), 'x': g.x()}
 
-    print(makeQobj(m))
+    print('list of matrices: ', k)
+    print('Direct sum of matrices: ', direct_sum(k))
+    print('string:', generatehamiltoniantring(5, '1', onestring=True, pos=2, pad= '3'))
+
+
