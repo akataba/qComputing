@@ -1,11 +1,9 @@
-from numpy import zeros, dot,savetxt,array,loadtxt, kron, absolute, cos, sin, arccos, arcsin, random, pi, exp, conjugate
-from numpy import ndarray
+from numpy import zeros, dot, savetxt, array, loadtxt, kron, pi, exp, conjugate
 import matplotlib.pyplot as plt
-import sys
+import SpecialStates as ss
 import qutip as qt
 import Gates as g
-
-sys.path.insert(1, '/home/amara/Documents/"Python Files"/PauliChannelPaper')
+from numpy import trace, cos, sin, arcsin, random
 
 
 def checknormkraus(k, n):
@@ -148,7 +146,7 @@ def generateDictKeys(string, n,step=1):
     """
     if type(string) != str or type(n) != int:
         raise ValueError('Please input string and integer for first and second argument')
-    elif step ==1:
+    elif step == 1:
         keylist = [string+str(i) for i in range(n)]
         return keylist
     else:
@@ -156,15 +154,19 @@ def generateDictKeys(string, n,step=1):
         return keylist
 
 
-def generatehamiltoniantring(n, s, onestring = None, pos = None, pad = None):
+def generatehamiltoniantring(n, s, onestring=None, pos=None, pad=None):
     """
-    This generates a string that is used to contruct tensor products terms in Hamiltonian with a certain kind of
+    This generates a string that is used to construct tensor products terms in Hamiltonian with a certain kind of
     interaction term. For example suppose we have an ising Hamiltonian with 4 qubits. We generate strings in a
     list 1100, 0110,0011. The zero will be used to tensor an identity and the 1 will be used to tensor the pauli
     matrix.
     :param n: The number of qubits we have in our system
     :param s: This is a string of 1's that determines how local our hamiltonian is. So a three body interaction
     means we need '111' or a two body interaction will be '11'
+    :param onestring: If you would rather generate one string than a list of strings
+    :param pos: The position where the string s should start  (only if onestring is not none)
+    :param pad: Rather than padding with zeros you could pad with some other number (only if onestring
+    is not none)
     :return: Returns a list of strings that will be used to create the Hamiltonian
     """
     label = []
@@ -241,20 +243,43 @@ def partial_trace(n, m, k):
     """
     :param n: Number of qubits in the system
     :param m: The position of the qubit to trace
-    :param k: label for the kth basis for the traced out qubit
+    :param k: label for the kth basis for the traced out qubit, label begins from 1
     :return: Returns the matrix that helps trace out the mth qubit
     """
-    tmp = 1
+    out = 1
     tensor_label = generatetensorstring(n, m)
-
     terms = {"0": g.id(), "1": g.e_ij((2, 1), k, 1)}
 
-    for i in tensor_label:
-        if tensor_label[int(i)] == '1':
-            tmp = kron(tmp, terms[i])
-        else:
-            tmp = kron(tmp, terms[i])
-    return tmp
+    out = superkron(terms, string=tensor_label, val=1)
+    return out
+
+
+def trace_qubits(n, rho, qubit_list):
+    """
+    :param n: Number of qubits in the system
+    :param rho: The system from which trace out qubits
+    :param qubit_list: List of qubits to trace out. Labels should begin from 1
+    :return: Returns a reduced density matrix
+    """
+    basis_labels = [1, 2]
+    ops ={}
+    red_dim = n - len(qubit_list)
+    reduced_matrix = zeros((pow(2, red_dim), pow(2, red_dim)))
+
+    # Initialize the tracing operator dictionary
+    for q in qubit_list:
+        ops[q] = []
+
+    # Put tracing out operators in dictionary
+    for q in qubit_list:
+        for b in basis_labels:
+            ops[q].append(partial_trace(n, q, b))
+
+    # Perform the tracing out operation
+    for q in ops:
+        for b in range(0, len(ops[q])):
+            reduced_matrix += dot(ops[q][b].T, dot(rho, ops[q][b]))
+    return reduced_matrix
 
 
 def subblock(u, p1, p2):
@@ -359,13 +384,35 @@ def direct_sum(matrices):
     return M
 
 
+def fidelity(rho, rho_1, error=False):
+    """
+    :param rho: First density matrix
+    :param rho_1: Second density matrix
+    :param error: If true returns 1 - fidelity otherwise simply returns fidelity
+    :return:  Return the fidelity of two matrices in variable out
+    """
+    out = 0
+    if error is False:
+        out = trace(dot(rho, rho_1)).real
+    else:
+        out = 1 - trace(dot(rho, rho_1)).real
+
+    return out
+
 
 if __name__ == '__main__':
     k = [g.z(), g.y(), g.x()]
     m = {'b1': g.b1(), 'b4': g.b4(), 'x': g.x()}
+    ghz = ss.ghz_state(2, '00', [1, 2])
+    cluster = ss.clusterstate(2, '00', [1, 2])
 
     print('list of matrices: ', k)
     print('Direct sum of matrices: ', direct_sum(k))
     print('string:', generatehamiltoniantring(5, '1', onestring=True, pos=2, pad= '3'))
+    print('list of string :', generatehamiltoniantring(4, '1'))
+    print('trace: ', fidelity(g.z(), g.y()))
+    print('trace operator for first bath basis: ', partial_trace(2, 2, 1))
+    print('tracing out operators: ', trace_qubits(2, g.z(), [2]))
+    print('reduced density matrix of bell state: ', trace_qubits(2, ghz.state, [2]))
 
 
