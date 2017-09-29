@@ -1,6 +1,6 @@
 import statistics as st
 import matplotlib.pyplot as plt
-from random import randint
+from random import randint, uniform
 
 
 class Data(object):
@@ -24,6 +24,7 @@ class Data(object):
             :param key: Calculates the mean for the data labeled by the key variable
             :return:
             """
+            self.average[key] = []
             self.average[key] = st.mean(self.d[key])
             return st.mean(self.d[key])
 
@@ -44,6 +45,7 @@ class Data(object):
             :param key: Calculates the median for the data labeled by the key variable
             :return:
             """
+            self.data_median[key] = []
             self.data_median[key] = st.median(self.d[key])
             return st.median(self.d[key])
 
@@ -52,10 +54,16 @@ class Data(object):
             :param key: Calculates the standard deviation for the data labeled by the key variable
             :return:
             """
+            self.standard_deviation[key] = []
             self.standard_deviation[key] = st.stdev(self.d[key])
             return st.stdev(self.d[key])
 
         def dataset_stddev(self, set_stddev):
+            """
+            Calculates the standard deviation for all the data sets in the dictionary "d"
+            :param set_stddev: key variable for standard deviation data
+            :return:
+            """
             temp = []
             self.standard_deviation[set_stddev] = [0]
             for key in self.d:
@@ -68,6 +76,7 @@ class Data(object):
             :param key: Calculates the variance for the data labeled by the key variable
             :return:
             """
+            self.variance[key] = []
             self.variance[key] = st.variance(self.d[key])
             return st.variance(self.d[key])
 
@@ -105,7 +114,18 @@ class Data(object):
             :return:
             """
             for label in self.d:
-                self.color[label] = '#%06X' % randint(0, 0xFFFFFF)
+                self.color[label] = (uniform(0, 1), uniform(0, 1), uniform(0, 1))
+
+        def initialize_d(self, label):
+            """
+            :param label: List of labels used to intialize values in the dictionary before it is used
+            :return:
+            """
+            if isinstance(label, list):
+                for i in label:
+                    self.d[i] = []
+            else:
+                self.d[label] = []
 
         def graph(self, x_axis, *args, val=0):
             """
@@ -118,14 +138,13 @@ class Data(object):
             plt.xlabel(self.xlabel)
             plt.ylabel(self.ylabel)
             if val == 0:
-                for label in range(0, len(args)):
-                    plt.plot(x_axis, self.d[args[label]], self.color[args[label]], label=self.label[args[label]])
+                for m in range(0, len(args)):
+                    plt.plot(x_axis, self.d[args[m]], color=self.color[args[m]], label=self.label[args[m]])
                     plt.legend()
                     plt.show()
             elif val == 1:
-                plt.figure()
                 for l in self.label:
-                    plt.plot(x_axis, self.d[self.label[l]], self.color[self.label[l]], label=self.label[l])
+                    plt.plot(x_axis, self.d[self.label[l]], color=self.color[self.label[l]], label=self.label[l])
                     plt.legend()
                     plt.show()
 
