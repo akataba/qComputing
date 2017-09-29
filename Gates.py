@@ -1,8 +1,7 @@
-from numpy import array, sqrt, kron, zeros, pi
+from numpy import array, sqrt, kron, zeros, pi, dot
 import Operations as op
 from scipy.linalg import expm
 from cmath import exp
-from sympy import Q
 
 
 def x():
@@ -41,22 +40,22 @@ def cz():
 
 
 def r_x(theta):
-    out7 = expm(-1j*theta*x())
+    out7 = expm(-1j*theta*x()/2)
     return out7
 
 
 def r_y(theta):
-    out8 = expm(-1j*theta*y())
+    out8 = expm(-1j*theta*y()/2)
     return out8
 
 
 def r_z(theta):
-    out8 = expm(-1j*theta*z())
+    out8 = expm(-1j*theta*z()/2)
     return out8
 
 
 def r_i(theta):
-    out9 = expm(-1j*theta*id())
+    out9 = expm(-1j*theta*id()/2)
     return out9
 
 
@@ -103,6 +102,12 @@ def q_Hamiltonian(ham, n, s):
 
 
 def e_ij(tup, i, j):
+    """
+    :param tup: Dimension of your matrix
+    :param i: The row your 1 will appear
+    :param j: The column your 1 will appear
+    :return: This returns a matrix with 1 in some spot (i,j) and zeros else where
+    """
     k = zeros(tup)
     k[i-1, j-1] = 1
     return k
@@ -117,36 +122,23 @@ def c_u(u, n, i, j):
     :param j: the position of target qubit for the controlled operation
     :return:  the controlled operation
     """
-    tmp = 1
-    tmp1 = 1
     term_1 = {
         "0": id(),
         "1": e_ij((2, 2), 1, 1)
     }
-    # What happens when the control qubit is in the zero state
-    label_1 = op.generatetensorstring(n, i)
-    print(label_1)
-    for qubit in range(len(label_1)):
-        key = label_1[qubit]
-        tmp = kron(tmp, term_1[key])
-    cu_1 = tmp
-    print('cu_1: ', cu_1)
-
-    # What happens when the control bit is in the one state
-
     term_2 = {
         "0": id(),
         "2": u,
-        "1": e_ij((2, 2), 2 , 2)
+        "1": e_ij((2, 2), 2, 2)
     }
 
+    # What happens when the control qubit is in the zero state
+    label_1 = op.generatetensorstring(n, i)
+    cu_1 = op.superkron(term_1, val=1, string=label_1)
+
+    # What happens when the control bit is in the one state
     label_2 = op.controlgatestring(n, ('1', i), ('2', j))
-    print(label_2)
-    for qubit in range(len(label_2)):
-        for digit in label_2[qubit]:
-            tmp1 = kron(tmp1, term_2[digit])
-    cu_2 = tmp1
-    print('cu_2: ', cu_2)
+    cu_2 = op.superkron(term_2, val=1, string=label_2)
 
     return cu_1 + cu_2
 
@@ -176,4 +168,31 @@ def bakersmap(n):
     return out
 
 
+def multi_hadamard(n):
+    temp = 1
+    for i in range(0, n):
+        temp = kron(temp, h())
+    return temp
 
+
+def pauli_group():
+    """
+    :return: Returns a dictionary of unitary representation of the single qubit pauli group
+    """
+    pauli_matrix = {'I': id(), 'X': x(), 'Y': y(), 'Z': z()}
+    center = {'i': 1j, '-i': -1j, '1': 1, '-1': -1}
+    qubit_group = {}
+
+    for i in center:
+        for p in pauli_matrix:
+            qubit_group[str(i)+str(p)] = dot(center[i], pauli_matrix[p])
+
+    return qubit_group
+
+
+if __name__ == "__main__":
+
+    print('e_{21}: ', e_ij((2, 1), 1, 1))
+    print('e_{12} :', e_ij((1, 2), 1, 2))
+    print('controlled not : ', c_u(z(), 2, 1, 2))
+    print('pauli group of single qubit: ', pauli_group())
