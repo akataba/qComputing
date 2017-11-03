@@ -42,7 +42,7 @@ class Qubit(object):
         :param o: The operator you want applied to the qubit
         :return:  Returns the transformed density matrix after the operation
         """
-        self.state = np.dot(o, np.dot(self.state, o))
+        self.state = np.dot(o, np.dot(self.state, op.ctranspose(o)))
 
     def measure(self):
         """
