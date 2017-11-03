@@ -1,7 +1,11 @@
-from numpy import array, sqrt, kron, zeros, pi, dot
+from numpy import array, sqrt, kron, zeros, pi, dot, trace, asarray
 import Operations as op
 from scipy.linalg import expm
 from cmath import exp
+import SpecialStates as ss
+from itertools import product
+
+
 
 
 def x():
@@ -55,7 +59,7 @@ def r_z(theta):
 
 
 def r_i(theta):
-    out9 = expm(-1j*theta*id()/2)
+    out9 = expm(1j*theta*id())
     return out9
 
 
@@ -76,6 +80,11 @@ def b3():
 
 def b4():
     out = array([[0, 0], [0, 1]])
+    return out
+
+
+def swap():
+    out =array([[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]])
     return out
 
 
@@ -143,6 +152,38 @@ def c_u(u, n, i, j):
     return cu_1 + cu_2
 
 
+def reversed_cu(u, n, i, j):
+    """
+        This creates a controlled unitary operation on n qubits
+        :param u: Unitary matrix
+        :param n: The number of qubits to be used
+        :param i: the position of control qubit for the controlled operation
+        :param j: the position of target qubit for the controlled operation
+        :return:  the controlled operation
+        """
+    term_1 = {
+        "0": id(),
+        "1": e_ij((2, 2), 1, 1)
+    }
+    term_2 = {
+        "0": id(),
+        "2": u,
+        "1": e_ij((2, 2), 2, 2)
+    }
+
+    # What happens when the control qubit is in the zero state
+    label_1 = op.generatetensorstring(n, i)
+    label_1 = ''.join(list(reversed(label_1)))
+    cu_1 = op.superkron(term_1, val=1, string=label_1)
+
+    # What happens when the control bit is in the one state
+    label_2 = op.controlgatestring(n, ('1', i), ('2', j))
+    label_2 = ''.join(list(reversed(label_2)))
+    cu_2 = op.superkron(term_2, val=1, string=label_2)
+
+    return cu_1 + cu_2
+
+
 def qft(n):
     """
     :param n: The number of qubits
@@ -175,24 +216,60 @@ def multi_hadamard(n):
     return temp
 
 
-def pauli_group():
+def pauli_group(n, full = False):
     """
+    :param n: number of qubits
+    :param full:
     :return: Returns a dictionary of unitary representation of the single qubit pauli group
     """
-    pauli_matrix = {'I': id(), 'X': x(), 'Y': y(), 'Z': z()}
+    pauli_matrix = {'I': id()/sqrt(2), 'X': x()/sqrt(2), 'Y': y()/sqrt(2), 'Z': z()/sqrt(2)}
     center = {'i': 1j, '-i': -1j, '1': 1, '-1': -1}
+    pauli_labels = [''.join(i) for i in product('IXYZ', repeat=n)]
     qubit_group = {}
+    pauli_dict ={}
+    if full is False:
+        for pl in pauli_labels:
+            pauli_dict[pl] = op.superkron(pauli_matrix, val=1, string=pl)
+    else:
+        for i in center:
+            for p in pauli_dict:
+                qubit_group[str(i)+str(p)] = dot(center[i], pauli_dict[p])
 
-    for i in center:
-        for p in pauli_matrix:
-            qubit_group[str(i)+str(p)] = dot(center[i], pauli_matrix[p])
+    return pauli_dict
 
-    return qubit_group
+
+def pauli_expansion(rho, pauli_d):
+    """
+    Pauli terms contributing to density matrix rho
+    :param rho:
+    :param pauli_d:
+    :return:
+    """
+
+    pauli_terms = {}
+    for i in pauli_d:
+        r = (trace(dot(rho,pauli_d[i])))
+        if r != 0:
+            pauli_terms[i] = r
+
+    return pauli_terms
 
 
 if __name__ == "__main__":
 
-    print('e_{21}: ', e_ij((2, 1), 1, 1))
-    print('e_{12} :', e_ij((1, 2), 1, 2))
-    print('controlled not : ', c_u(z(), 2, 1, 2))
-    print('pauli group of single qubit: ', pauli_group())
+    # print('e_{21}: ', e_ij((2, 1), 1, 1))
+    # print('e_{12} :', e_ij((1, 2), 1, 2))
+    # print('controlled not : ', reversed_cu(x(), 3, 2, 1))
+    # print('pauli group of single qubit: ', pauli_group())
+    # print('swap gate: ', swap())
+    print(pauli_group(2))
+
+    # bell=ss.ghz_state(3, '000', [1, 2, 1, 3])
+    # cluster = ss.clusterstate(3, '000', [1, 2, 2, 3])
+    # c = pauli_expansion(bell.state,  b)
+    # d = pauli_expansion(cluster.state, b)
+
+
+
+
+
