@@ -3,8 +3,8 @@ import qubit_class as qubit
 import Operations as op
 import NoisyEvolution as ne
 import Gates as g
-from sympy import*
-from sympy.physics.quantum import *
+# from sympy import*
+# from sympy.physics.quantum import *
 
 
 def clusterstate(n, string, ar, noisy=False, kraus=None):
@@ -91,24 +91,24 @@ if __name__ == "__main__":
 
     state = clusterstate(3, '000', [1, 2, 2, 3])
     ghzstate = ghz_state(3, '000', [1, 2, 1, 3])
-    h = Matrix([[1, 1], [1, -1]])*1/sqrt(2)
-    o = Matrix([[1, 0], [0, 0]])
-    i = Matrix([[0, 0], [0, 1]])
-    id_gate = Matrix([[1, 0], [0, 1]])
-    z = Matrix([[1, 0], [0, -1]])
-    x = Matrix([[0, 1], [1, 0]])
-    cz = TensorProduct(o, id_gate, id_gate) + TensorProduct(i, z, id_gate)
-    cx = TensorProduct(o, id_gate, id_gate) + TensorProduct(i, x, id_gate)
-    cz_23 = TensorProduct(id_gate, o, id_gate) + TensorProduct(id_gate, i, z)
-    cx_13 = TensorProduct(o, id_gate, id_gate) + TensorProduct(i, id_gate, x)
-    multi_h = TensorProduct(h, h, h)
-    h_g = TensorProduct(h, id_gate, id_gate)
-    init_state = TensorProduct(o, o, o)
-    cluster = cz_23*(cz*(multi_h*init_state*multi_h**-1)*cz**-1)*cz_23**-1
-    ghz = cx_13*(cx * (h_g * init_state * h_g ** -1) * cx ** -1) * cx_13 ** -1
-    print(" The cluster states is: ", state.state)
-    print("The ghz state is : ", ghzstate.state)
-    pprint(ghz)
+    # h = Matrix([[1, 1], [1, -1]])*1/sqrt(2)
+    # o = Matrix([[1, 0], [0, 0]])
+    # i = Matrix([[0, 0], [0, 1]])
+    # id_gate = Matrix([[1, 0], [0, 1]])
+    # z = Matrix([[1, 0], [0, -1]])
+    # x = Matrix([[0, 1], [1, 0]])
+    # cz = TensorProduct(o, id_gate, id_gate) + TensorProduct(i, z, id_gate)
+    # cx = TensorProduct(o, id_gate, id_gate) + TensorProduct(i, x, id_gate)
+    # cz_23 = TensorProduct(id_gate, o, id_gate) + TensorProduct(id_gate, i, z)
+    # cx_13 = TensorProduct(o, id_gate, id_gate) + TensorProduct(i, id_gate, x)
+    # multi_h = TensorProduct(h, h, h)
+    # h_g = TensorProduct(h, id_gate, id_gate)
+    # # init_state = TensorProduct(o, o, o)
+    # cluster = cz_23*(cz*(multi_h*init_state*multi_h**-1)*cz**-1)*cz_23**-1
+    # ghz = cx_13*(cx * (h_g * init_state * h_g ** -1) * cx ** -1) * cx_13 ** -1
+    # print(" The cluster states is: ", state.state)
+    # print("The ghz state is : ", ghzstate.state)
+    # pprint(ghz)
 
 
 
