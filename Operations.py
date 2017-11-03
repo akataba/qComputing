@@ -1,9 +1,15 @@
 from numpy import zeros, dot, savetxt, array, loadtxt, kron, pi, exp, conjugate
+from numpy.linalg import eig
 import matplotlib.pyplot as plt
 import SpecialStates as ss
 import qutip as qt
 import Gates as g
-from numpy import trace, cos, sin, arcsin, random
+from numpy import trace, cos, sin, arcsin, random, sqrt
+from quantum_CSD_compiler.DiagUnitaryExpander import *
+from quantum_CSD_compiler.MultiplexorExpander import *
+from quantum_CSD_compiler.Tree import *
+from for_IBM_devices.Qubiter_to_IBMqasm2_5q import *
+import os as opsys
 
 
 def checknormkraus(k, n):
@@ -83,6 +89,22 @@ def createlabel(q, n):
         else:
             break
     return label
+
+
+def padded_dec2base(n, q, base):
+    """
+       Gets gives you a string in base less than 20
+       :param n: The number you have
+       :param q: The number of qubits in system or determines the number of zeros to pad i.e
+       if n=3 and q=3 the function will return 011 rather than 11
+       :param base: The base you want
+       :return:  The string containing giving the base m representation
+       """
+    convertstring = "0123456789ABCDEF"
+    if n < base:
+        return convertstring[n].zfill(q)
+    else:
+        return (dec2base(n // base, base) + convertstring[n % base]).zfill(q)
 
 
 def ctranspose(A):
@@ -320,6 +342,21 @@ def generateUnitary():
     return dot(exp(1j*rho), u)
 
 
+def gram_schmidt(A):
+    """
+    :param A: Matrix that does not have orthornormal column
+    :param row_vecs:
+    :param norm:
+    :return:
+    """
+    for i in range(0, len(A)):
+        for j in range(0, i):
+            A[:, i] = A[:, i] - (dot(A[:, i].T, A[:, j])) / (dot(A[:, j].T, A[:, j]))*A[:, j]
+        A[:, i] = A[:, i] / sqrt(dot(A[:, i].T, A[:, i]))
+
+    return A
+
+
 def superkron(*args, val=0,  string=''):
     """
     This generalization of kron can be used in 2 ways. It can straight forwardly take the tensor product of
@@ -344,6 +381,57 @@ def superkron(*args, val=0,  string=''):
         for digit in string:
             out = kron(out, args[0][digit])
     return out
+
+
+def computational_basis(q, n):
+    """
+    :param n: type of qudit
+    :param q: Number of qubits
+    :return:
+    """
+    zero = np.array([1, 0])
+    one = np.array([0, 1])
+    basis_labels = createlabel(q, n)
+    operators = {'0': zero, '1': one}
+    basis_list = [np.array([superkron(operators, val=1, string=i)])for i in basis_labels]
+
+    return basis_list
+
+
+def realify(vec):
+    """
+    Gets a complex vector in C^d and produces a real vector in R^2d
+    :param vec: This should be a row vector
+    :return:
+    """
+    realified = []
+    a = vec.tolist()
+    for i in a[0]:
+        real_part = i.real
+        realified.append(real_part)
+    for i in a[0]:
+        imag_part = i.imag
+        realified.append(imag_part)
+    realified = np.array(realified)
+    return realified
+
+
+def construct_preunitary(arr, array_list):
+    """
+    Useful when constructing unitaries to make quantum states. It needs to be
+    input into gram schmidt orthogonalization method
+    :param arr:
+    :param array_list:
+    :return:
+    """
+    s = array_list[1].shape
+    preunitary = np.array([])
+    preunitary = np.append(preunitary, arr)
+    preunitary = preunitary.reshape(1, s[1])
+    for i in range(1, len(array_list)):
+        preunitary = np.hstack((preunitary, array_list[i]))
+    preunitary = preunitary.reshape(s[1], s[1]).T
+    return preunitary
 
 
 def makeQobj(*args):
@@ -400,19 +488,119 @@ def fidelity(rho, rho_1, error=False):
     return out
 
 
+def gatecompiler(file_prefix, unitary, num_bits):
+    """
+    :param file_prefix:
+    :param unitary
+    :param num_bits:
+    :return:
+    """
+
+    emb = CktEmbedder(num_bits, num_bits)
+    t = Tree(True, file_prefix, emb, unitary, verbose=False)
+    t.close_files()
+    style = 'exact'
+    MultiplexorExpander(file_prefix, num_bits, style)
+    DiagUnitaryExpander(file_prefix + '_X1', num_bits, style)
+    SEO_reader(file_prefix + '_X2', num_bits)
+
+
+def eigen(A):
+    """
+    :param A:
+    :return:
+    """
+    v, w = eig(A)
+    shape_size = w.shape
+    eigenvector_list = [array([w[:, i]]) for i in range(0, shape_size[1])]
+    return v, eigenvector_list
+
+
+def read_file(file, line_count=1, readline=None):
+    """
+    :param file: file name
+    :param line_count: The number of lines in the file
+    Note first line is indexed as 0
+    :param readline: The line to read
+    line by line
+    :return:
+    """
+
+    with open(file, 'r') as f:
+        if readline is None:
+            line = f.read()
+            return line  # Possible error, may not want to use return statement
+        else:
+            for i, lines in enumerate(f):
+                if i == readline-1:
+                    return lines
+
+
+def file_linecount(file):
+    """
+    :param file: file name
+    :return: Number of lines in a file
+    """
+    linecount = sum(1 for line in open(file))
+    return linecount
+
+
+def remove_line(file, string=[]):
+    """
+    Removes specific words from files and returns the file with same name but bad lines
+    are removed
+    :param file:
+    :param string:
+    :return:
+    """
+    with open(file, 'r') as f, open('tmp.txt', '+a') as new_f:
+        for line in f:
+            clean = True
+            for word in string:
+                if word in line:
+                    clean = False
+                if clean is True:
+                    new_f.write(line)
+    opsys.remove(file)
+    opsys.rename('tmp.txt', file)
+
+
+def unitary_to_qasm(file_prefix1, u, n, unwanted_words):
+    """
+    :param file_prefix1:
+    :param u:
+    :param n:
+    :param unwanted_words: remove lines which have unwanted words
+    :return: name of file with qasm code
+    """
+    gatecompiler(file_prefix1, u, n)
+    remove_line(file_prefix1 + '_X2_' + str(n) + '_eng.txt', unwanted_words)
+    Qubiter_to_IBMqasm2_5q(file_prefix1 + '_X2', n, write_qubiter_files=True)
+    return file_prefix1 + '_X2_' + 'qasm2.txt'
+
+
 if __name__ == '__main__':
     k = [g.z(), g.y(), g.x()]
     m = {'b1': g.b1(), 'b4': g.b4(), 'x': g.x()}
     ghz = ss.ghz_state(2, '00', [1, 2])
     cluster = ss.clusterstate(2, '00', [1, 2])
+    u = generateUnitary()
+    unitary = superkron(u, u)
+    e, v = eigen(g.x())
 
-    print('list of matrices: ', k)
-    print('Direct sum of matrices: ', direct_sum(k))
-    print('string:', generatehamiltoniantring(5, '1', onestring=True, pos=2, pad= '3'))
-    print('list of string :', generatehamiltoniantring(4, '1'))
-    print('trace: ', fidelity(g.z(), g.y()))
-    print('trace operator for first bath basis: ', partial_trace(2, 2, 1))
-    print('tracing out operators: ', trace_qubits(2, g.z(), [2]))
-    print('reduced density matrix of bell state: ', trace_qubits(2, ghz.state, [2]))
+    # print('list of matrices: ', k)
+    # print('Direct sum of matrices: ', direct_sum(k))
+    # print('string:', generatehamiltoniantring(5, '1', onestring=True, pos=2, pad= '3'))
+    # print('list of string :', generatehamiltoniantring(4, '1'))
+    # print('trace: ', fidelity(g.z(), g.y()))
+    # print('trace operator for first bath basis: ', partial_trace(2, 2, 1))
+    # print('tracing out operators: ', trace_qubits(2, g.z(), [2]))
+    # print('reduced density matrix of bell state: ', trace_qubits(2, ghz.state, [2]))
 
-
+    # gatecompiler('./Gate Compiler Files/random_example', unitary, 2)
+    # print('binary number 3, ', dec2base(3, 2))
+    # print('binary number 1, ', padded_dec2base(1, 2, 2))
+    # print('eigenvalues of sigma x: ', e)
+    # print('eigenvectors of sigma x:', v)
+    l = read_file('/home/amara/Python Files/qComputing/Gate Compiler Files/random_example_X2_2_eng.txt', readline=None)
+    print(l)
