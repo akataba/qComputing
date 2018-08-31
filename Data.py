@@ -4,7 +4,10 @@ from random import randint, uniform
 
 
 class Data(object):
-
+        """
+        This class is suppose to help with graphing with and doing simple statistical studies with sets of data sets.
+        Each data set is a list in a data dictionary.
+        """
         def __init__(self):
             self.d = {}  # This is a dictionary of data sets
             self.label = {}  # This is a dictionary of labels used for data sets
@@ -148,23 +151,55 @@ class Data(object):
                     plt.legend()
                     plt.show()
 
-        def graph_average(self, x_axis, key):
+        # The method below seems pointless.
+        def graph_average(self, xlabel_1, ylabel_1, x_axis, y_axis, key):
             dict_key = list(self.d.keys())
-            plt.xlabel(self.xlabel)
-            plt.ylabel(self.ylabel)
-            plt.plot(x_axis, self.dataset_average[key], self.color[dict_key[0]], label=key)
+            plt.xlabel(xlabel_1)
+            plt.ylabel(ylabel_1)
+            plt.plot(x_axis, y_axis, self.color[dict_key[0]], label=key)
             plt.legend()
             plt.show()
 
-        def graph_errorbars(self, x_axis, key, key_1):
-            plt.xlabel(self.xlabel)
-            plt.ylabel(self.ylabel)
-            plt.errorbar(x_axis, self.dataset_average[key],
-                         yerr=self.standard_deviation[key_1], fmt='o', label=key_1)
-            plt.legend()
-            plt.show()
+        def graph_errorbars(self, x_axis=None, y_axis=None, key=None, errorbar_key=None,
+                            label_1=None, use_dict=True, xlabel_1=None, ylabel_1=None,
+                            errorbars=None):
+            """
+            This functions either graphs data stored in the data dictionary or whatever is handed to it.
+            :param x_axis: if use_dict is false it contains the data for the x axis
+            :param y_axis: if use_dict is false it contains the data for the y axis
+            :param key: If use_dict is true, this identifies the data we need to graph
+            :param errorbar_key: The key used to identify the error bars for the specific data. Needed if use_dict is true
+            :param label_1: Whether use_dict is true or not it labels the data for the graph
+            :param use_dict: A boolean variable, if true  it graphs specific data from dictionary
+            :param xlabel_1: If use_dict is false this provides a label for the x axis.
+            :param ylabel_1: If use_dict is false this provides a label for the y axis.
+            :param errorbars: If use_dict is false this provides the data for the variance
+            :return:
+            """
+            if use_dict:
+                plt.xlabel(self.xlabel)
+                plt.ylabel(self.ylabel)
+                if len(x_axis) != len(self.dataset_average[key]):
+                    plt.errorbar(list(range(len(self.dataset_average[key]))), self.dataset_average[key],
+                                 yerr=self.standard_deviation[errorbar_key], fmt='o', label=label_1)
+                else:
+                    plt.errorbar(x_axis, self.dataset_average[key],
+                                 yerr=self.standard_deviation[errorbar_key], fmt='o', label=label_1)
+                plt.legend()
+                plt.show()
+            else:
+                plt.xlabel(xlabel_1)
+                plt.ylabel(ylabel_1)
+                plt.errorbar(x_axis, y_axis, yerr=errorbars, fmt='o', label=label_1)
+                plt.legend()
+                plt.show()
 
         def addlist(self, key, l):
+            """
+            :param key: label for the data
+            :param l: list of data
+            :return:
+            """
             if isinstance(key, str):
                 self.d[key] = l
 
@@ -183,11 +218,6 @@ if __name__ == "__main__":
     data.d['k'] = k
     data.d['k1'] = k1
     data.d['k2'] = k2
-    print(len(data))
-
-    data.dataset_mean('average')
-    data.dataset_stddev('av')
-    data.graph_errorbars(list(range(0, 20)), 'average', 'av')
-
+    
 
 
