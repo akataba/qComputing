@@ -3,6 +3,7 @@ import Gates as g
 import Operations as op
 import inspect
 from itertools import zip_longest
+import numpy as np
 
 """
 The purpose of this class is to abstract most of the job of making quantum circuits.
@@ -12,17 +13,17 @@ for gates and get back the unitary operator for that gate
 
 
 class Circuit(object):
-
-    def __init__(self, state):
+    def __init__(self, state, n=3):
         """
         :param state: A string for the initial density matrix which will be used for the circuit
         """
-        self.qubits = q.MultiQubit(state)
+        self.qubits = q.Qubit(state)
         self.bucket = {}  # contains the string of functions for each step
         self.gate_list = {}  # contains a list of functions from the Gates module
         self.get_gates()  # adds "g." to string representation of function
         self.arg_bucket = {}  # For each step we have a list of arguments. An element in a list tells us the
         # For the specific function
+        self.n = n  # Number of qubits in the circuit
 
     def get_circuit(self):
         return self.bucket
@@ -46,9 +47,9 @@ class Circuit(object):
         if isinstance(step, str) and isinstance(gate_string, str):
             self.arg_bucket[step] = {}
             self.bucket[step] = list(gate_string.split(','))
-            if arg_list:
-                for m, i in zip_longest(self.bucket[step], arg_list):
-                    self.arg_bucket[step][m] = i
+            # if arg_list:
+            for m, i in zip_longest(self.bucket[step], arg_list):
+                self.arg_bucket[step][m] = i
         else:
             return 'Please use strings for step and gate_string arguments'
 
@@ -93,7 +94,7 @@ class Circuit(object):
             for i in range(len(operators)):
                 if self.check_signature(operators[i]) is not []:
                     arg = self.arg_bucket[step][operators[i].__name__]
-                    operators[i] = operators[i](arg)
+                    operators[i] = operators[i](*arg)
                 else:
                     operators[i] = operators[i]()
         o = op.superkron(*operators)
@@ -109,14 +110,59 @@ class Circuit(object):
         arg_list = list(sig.parameters)
         return arg_list
 
+    def circuit_unitary(self):
+        """
+        :return: Returns the unitary for the circuit
+        """
+        out = np.eye(2 ** self.n, dtype='complex128')
+        for i in self.bucket:
+            out = np.dot(out, self.step_operator(i))
+        return out
+
 
 if __name__ == '__main__':
-    c = Circuit('')
-    c.add_step('0', 'z,x')
-    c.add_step('1', 'r_x,r_y', arg_list=[90, 75])
-    cl = c.step_operator('1')
+    # This should create a 3 qubit GHZ circuit
+    xxx = op.superkron(g.x(), g.x(), g.x())
+    c = Circuit('000')
+    c.add_step('0', 'h,id,id', arg_list=[[], [], []])
+    c.add_step('1', 'c_u', arg_list=[[g.x(), 3, 1, 2]])
+    c.add_step('2', 'c_u', arg_list=[[g.x(), 3, 2, 3]])
+    c.apply_circuit()
+    ghz = c.qubits.state
 
-    print(cl)
+    # This should be a Toffoli gate circuit
+
+    d = Circuit('110')
+    d.add_step('0','x,id,id', arg_list=[[],[],[]])
+    d.add_step('1', 'id,id,r_y', arg_list=[[], [], [g.pi / 4]])
+    d.add_step('2', 'c_u', arg_list=[[g.x(), 3, 2, 3]])
+    d.add_step('3', 'id,id,r_y', arg_list=[[], [], [g.pi / 4]])
+    d.add_step('4', 'id,id,x', arg_list=[[], [], []])
+    d.add_step('5', 'c_u', arg_list=[[g.x(), 3, 1, 3]])
+    d.add_step('6', 'id,id,r_y', arg_list=[[], [], [-g.pi / 4]])
+    d.add_step('7', 'c_u', arg_list=[[g.x(), 3, 2, 3]])
+    d.add_step('8', 'id,id,r_y', arg_list=[[], [], [-g.pi / 4]])
+    # print(d.circuit_unitary())
+
+    f = Circuit('00', n=2)
+    f.add_step('0','id,phase', arg_list=[[], [-g.pi/2]])
+    f.add_step('1','c_u', arg_list=[[g.x(), 2, 1, 2]])
+    f.add_step('2','id,phase', arg_list=[[], [0]])
+    f.add_step('3', 'id,r_y', arg_list=[[],[-g.pi/2]])
+    f.add_step('4', 'c_u', arg_list=[[g.x(), 2, 1, 2]])
+    f.add_step('5', 'id,r_y', arg_list=[[],[g.pi/2]])
+    f.add_step('6', 'id,phase', arg_list=[[], [g.pi/2]])
+    # print(f.circuit_unitary())
+
+    # Should create a three qubit cluster state
+    e = Circuit('000', n=3)
+    e.add_step('0', 'h,h,h', arg_list=[[], [], []])
+    e.add_step('1', 'c_u', arg_list=[[g.z(), 3, 1, 2]])
+    e.add_step('2', 'c_u', arg_list=[[g.z(), 3, 2, 3]])
+    e.apply_circuit()
+    cluster = e.qubits.state
+    # print(cluster)
+    print(np.trace(np.dot(xxx,cluster)))
 
 
 
