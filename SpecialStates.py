@@ -1,13 +1,13 @@
 import numpy as np
 import qubit_class as qubit
 import Operations as op
-import NoisyEvolution as ne
 import Gates as g
+import qutip as qt
 # from sympy import*
 # from sympy.physics.quantum import *
 
 
-def clusterstate(n, string, ar, noisy=False, kraus=None):
+def clusterstate(n, noisy=False, kraus=None):
     """
     This creates a cluster state
     :param n: This is the number of qubits in the system
@@ -22,24 +22,22 @@ def clusterstate(n, string, ar, noisy=False, kraus=None):
     :return: returns the state of the qubit after the controlled z operations. This should be a cluster state
 
     """
-
-    q = qubit.MultiQubit(string)
+    string = '0'*n
+    q = qubit.Qubit(string, n)
     q.state = np.dot(g.multi_hadamard(n), np.dot(q.state, g.multi_hadamard(n)))
     if noisy is False:
-        for i in range(0, len(ar), 2):
-            controlgate = g.c_u(g.z(), n, ar[i], ar[i+1])
+        for i in range(1, n+1):
+            controlgate = g.c_u(g.z(), n, i, i+1)
             q.state = np.dot(controlgate, np.dot(q.state, op.ctranspose(controlgate)))
     else:
-        for i in range(0, len(ar), 2):
-            controlgate = g.c_u(g.z(), n, ar[i], ar[i+1])
+        for i in range(1, n+1):
+            controlgate = g.c_u(g.z(), n, i, i+1)
             q.q_decohere(kraus, n)
             q.state = np.dot(controlgate, np.dot(q.state, op.ctranspose(controlgate)))
-
-
     return q
 
 
-def ghz_state(n, string, ar, noisy=False, kraus=None):
+def ghz_state(n, noisy=False, kraus=None):
     """
     This creates an n qubit ghz state
     :param n:  The number of qubits in the state
@@ -54,17 +52,17 @@ def ghz_state(n, string, ar, noisy=False, kraus=None):
     :param kraus: This will be a 3 dimensional array of kraus matrices
     :return: returns the state of the qubit after the controlled x operations. This should be a ghz state.
     """
-
-    q = qubit.MultiQubit(string)
+    string = '0'*n
+    q = qubit.Qubit(string, n)
     h_gate = op.superkron(g.h(), np.eye(pow(2, n-1)))
     q.state = np.dot(h_gate, np.dot(q.state, h_gate))
     if noisy is False:
-        for i in range(0, len(ar), 2):
-            controlgate = g.c_u(g.x(), n, ar[i], ar[i + 1])
+        for i in range(1, n+1):
+            controlgate = g.c_u(g.x(), n, i, i + 1)
             q.state = np.dot(controlgate, np.dot(q.state, op.ctranspose(controlgate)))
     else:
-        for i in range(0, len(ar), 2):
-            controlgate = g.c_u(g.x(), n, ar[i], ar[i + 1])
+        for i in range(1, n+1):
+            controlgate = g.c_u(g.x(), n, i, i + 1)
             q.q_decohere(kraus, n)
             q.state = np.dot(controlgate, np.dot(q.state, op.ctranspose(controlgate)))
 
@@ -81,16 +79,97 @@ def purestate(string):
     :return:
     """
     try:
-        q = qubit.MultiQubit(string)
+        q = qubit.Qubit(string, len(string))
         return q
     except TypeError:
         return 'Please input string'
 
 
+def ghz_qobj(n, density_matrix=False, noise=False, T1=None, T2=None, ham=None,
+             time=None):
+    """
+    :param n:
+    :param density_matrix:
+    :param noise:
+    :param T1: Should be a list of T1 times
+    :param T2: Should be a list of T2 times
+    :param ham: Hamiltonian for evolution
+    :return:
+    """
+    q0 = qt.basis(2, 0)
+    x = qt.sigmax()
+    q_list = [q0 for i in range(0, n)]
+    psi = qt.tensor(*q_list)
+    if density_matrix is False:
+        psi = qt.qip.snot(n, 0) * psi
+        for i in range(0, n-1):
+            psi = qt.qip.controlled_gate(x, n, 0, i+1) * psi
+        return psi
+    if density_matrix:
+        rho = psi * psi.dag()
+        rho = qt.qip.snot(n, 0)* rho * qt.qip.snot(n, 0)
+        for i in range(0, n-1):
+            rho = qt.qip.controlled_gate(x, n, 0, i+1) * rho * qt.qip.controlled_gate(x, n, 0, i+1)
+        return rho
+    if noise:
+        q = qubit.QubitObj(n, T1, T2, [10**(-9)], string='0'*n,damp=True, phase_damp=True)
+        q.hamiltonian = ham
+        q.times = time
+        q.evolve()
+        q.apply_op(qt.qip.snot(n, 0))
+        q.evolve()
+        for i in range(0, n - 1):
+            q.apply_op(qt.qip.controlled_gate(x, n, 0, i + 1))
+            q.evolve()
+        return q.rho
+
+
+def cluster_obj(n, density_matrix=False, noise=False, T1=None, T2=None, ham=None,
+             time=None):
+    q0 = qt.basis(2, 0)
+    z = qt.sigmaz()
+    q_list = [q0 for i in range(0, n)]
+    psi = qt.tensor(*q_list)
+    if density_matrix is False:
+        psi = qt.qip.hadamard_transform(n) * psi
+        for i in range(0, n-1):
+            psi = qt.qip.controlled_gate(z, n, i, i+1) * psi
+        return psi
+    if density_matrix:
+        rho = psi*psi.dag()
+        rho = qt.qip.hadamard_transform(n) * rho * qt.qip.hadamard_transform(n)
+        for i in range(0, n-1):
+            rho = qt.qip.controlled_gate(z, n, i, i+1)* rho * qt.qip.controlled_gate(z, n, i, i+1)
+        return rho
+    if noise:
+        q = qubit.QubitObj(n, T1, T2, [10 ** (-9)], string='0' * n, damp=True, phase_damp=True)
+        q.hamiltonian = ham
+        q.times = time
+        q.evolve()
+        q.apply_op(qt.qip.hadamard_transform(n))
+        q.evolve()
+        for i in range(0, n - 1):
+            q.apply_op(qt.qip.controlled_gate(z, n, i, i + 1))
+            q.evolve()
+        return q.rho
+
+
+def pure_obj(n, density_matrix=False):
+    q0 = qt.basis(2, 0)
+    q_list = [q0 for i in range(0, n)]
+    psi = qt.tensor(*q_list)
+    if density_matrix is False:
+        return psi
+    if density_matrix:
+        return psi * psi.dag()
+
+
 if __name__ == "__main__":
 
-    state = clusterstate(3, '000', [1, 2, 2, 3])
-    ghzstate = ghz_state(3, '000', [1, 2, 1, 3])
+    state = clusterstate(3)
+    # ghzstate = ghz_state(3)
+    # print(ghz_qobj(3, density_matrix=True))
+    # print(cluster_obj(2, density_matrix=True))
     # h = Matrix([[1, 1], [1, -1]])*1/sqrt(2)
     # o = Matrix([[1, 0], [0, 0]])
     # i = Matrix([[0, 0], [0, 1]])
@@ -103,12 +182,12 @@ if __name__ == "__main__":
     # cx_13 = TensorProduct(o, id_gate, id_gate) + TensorProduct(i, id_gate, x)
     # multi_h = TensorProduct(h, h, h)
     # h_g = TensorProduct(h, id_gate, id_gate)
-    # # init_state = TensorProduct(o, o, o)
+    # init_state = TensorProduct(o, o, o)
     # cluster = cz_23*(cz*(multi_h*init_state*multi_h**-1)*cz**-1)*cz_23**-1
     # ghz = cx_13*(cx * (h_g * init_state * h_g ** -1) * cx ** -1) * cx_13 ** -1
-    # print(" The cluster states is: ", state.state)
+    # print(state.state)
     # print("The ghz state is : ", ghzstate.state)
-    # pprint(ghz)
+    # pprint(cluster)
 
 
 
