@@ -1,15 +1,17 @@
-from numpy import zeros, dot, savetxt, array, loadtxt, kron, pi, exp, conjugate
+from numpy import zeros, dot, savetxt, array, kron, pi, exp, conjugate
 from numpy.linalg import eig
+from numpy import genfromtxt
 import matplotlib.pyplot as plt
-import SpecialStates as ss
 import qutip as qt
 import Gates as g
 from numpy import trace, cos, sin, arcsin, random, sqrt
-from quantum_CSD_compiler.DiagUnitaryExpander import *
-from quantum_CSD_compiler.MultiplexorExpander import *
-from quantum_CSD_compiler.Tree import *
-from for_IBM_devices.Qubiter_to_IBMqasm2_5q import *
-import os as opsys
+# from quantum_CSD_compiler.DiagUnitaryExpander import *
+# from quantum_CSD_compiler.MultiplexorExpander import *
+# from quantum_CSD_compiler.Tree import *
+# from for_IBM_devices.Qubiter_to_IBMqasm2_5q import *
+import numpy as np
+import os
+import glob
 
 
 def checknormkraus(k, n):
@@ -136,27 +138,153 @@ def write_to_file(name, *args):
     file.close()
 
 
-def load_data(name, marker1, xlabel='', ylabel='', val=0):
+def load_data(f='', use_cols=[], xlabel='', ylabel='',scatter=False,contour=False, connect=False,
+              errorbar=False, std_col=None, data_domain=None, labo=[], title='',
+              return_data=False, graph=False, multiple_files=None, file_stem='', folder=None,
+              file_list = None, color_list=None, combine=False):
     """
     This function has two uses, it either loads the data and plots it if val=1 or it just gets the data from
      the data file and puts it into arrays which it returns
-    :param name: String varible containing name of the file
-    :param marker1: This sets the marker used to create points on scatter plot
-    :param val: Should be 1 to load and plot data else throw error message else just loads data
+    :param f: String varible containing name of the file
+    :param scatter: Boolean variable , make True if scatter plot is desired
+    :param connect: Boolean variable, make True if connected plot is desired
+    :param errorbar: Boolean variable, make True if verticle error bars are desired
+    :param std_col: Should be integer. Specifies which column in file will represent
+    the errorbars
+    :param contour: Boolean variable, make True if contour plot is desired
+    :param use_cols: Which columns in the file do you want to work with. Must
+    be a list
+    :param data_domain: This is filled in when the x axis data is not part of
+    the file i.e defined externally
+    :param labo : This is the label for the graph
+    :param title: The title of the graph
+    :param graph: Boolean expression, make True if you want to graph data.
+    :param return_data: Boolean expression, make True if you want to simply
+    return specific columns from file. Columns will be in a list
     :param xlabel: xlabel for the graph
     :param ylabel: ylabel for the graph
+    :param multiple_files: Boolean expression, make True if data is going to
+    be retrieved from many data files in a folder
+    :param file_stem: Used if multiples_files is True, contains a string
+    that the set of files all have
+    :param folder: Folder which contains the files. Used if multiple files
+    is True
+    :param color_list: List of colors to use for graphs
+    :param combine: Boolean expression, if true data from data files is combined
     :return:
     """
-    data_1, data_2 = loadtxt(name, dtype=float, unpack=True)
 
-    if val == 1:
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
-        plt.scatter(data_1,data_2, label = marker1,color ='k')
-        plt.legend()
-        plt.show()
+    def combine_data(data_files_dict):
+        """
+        This combines data from different files so that the first column of file 1 is concatenated with first column
+        oof file 2 and so on
+        :param data_files_dict:
+        :return:
+        """
+        key_list = list(data_files_dict.keys())
+        no_col = len(data_files_dict[key_list[0]])
+        combined = []
+        for n in range(0, no_col):
+            d = np.empty(shape=[0, 1])
+            for k in data_files_dict:
+                d = np.append(d, data_files_dict[k][n])
+            combined.append(d)
+        return combined
+
+    def data_graph(graph=False):
+        """
+        Gets data from folder or list of files or file and graphs it in
+        some manner
+        :param graph:
+        :return:
+        """
+        def axes_data(use_cols1, data1, domain=None):
+            if domain is not None:
+                axis = [0] * (2 * len(use_cols1))
+                for k in range(len(use_cols1)):
+                    axis[2 * k] = domain
+                    axis[2 * k + 1] = data1[k]
+                return axis
+            else:
+                axis = [data1[k] for k in use_cols1]
+                return axis
+        if graph:
+            axes = axes_data(use_cols, data, domain=data_domain)
+            if scatter:
+                for i in range(int(len(axes)/2)):
+                    if i % 2 == 0:
+                        plt.scatter(axes[2*i], axes[2*i+1], color_list[i],
+                                 label=labo[i])
+                    else:
+                        plt.scatter(axes[2 * i], axes[2 * i + 1], color_list[i]
+                                 ,label=labo[i])
+
+            if connect:
+                for i in range(int(len(axes)/2)):
+                    if i % 2 == 0:
+                        plt.plot(axes[2*i], axes[2*i+1], color_list[i],
+                                 label=labo[i])
+                    else:
+                        plt.plot(axes[2 * i], axes[2 * i + 1], color_list[i]
+                                 , label=labo[i])
+
+            if errorbar:
+                plt.errorbar(*axes, yerr=data[std_col], fmt='o', label=labo)
+            if contour:
+                from mpl_toolkits.mplot3d import Axes3D
+                from matplotlib import cm
+                from matplotlib.ticker import LinearLocator, FormatStrFormatter
+                fig = plt.figure()
+                ax = fig.gca(projection='3d')
+                z = axes[2][:100]
+                len_z = len(z)
+                n = np.sqrt(len_z)
+                x = np.arange(0, n)
+                y = x
+                x, y = np.meshgrid(x,y)
+                two_dz = z.reshape((int(n), int(n)))
+                surf = ax.plot_surface(x,y,two_dz,cmap=cm.coolwarm,
+                       linewidth=0, antialiased=False)
+                # Customize the z axis.
+                ax.set_zlim(0, 0.18)
+                ax.zaxis.set_major_locator(LinearLocator(10))
+                ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
+
+                # Add a color bar which maps values to colors.
+                fig.colorbar(surf, shrink=0.5, aspect=5)
+                # heat_map = plt.pcolor(two_dz)
+                # heat_color = plt.colorbar(heat_map, orientation = 'horizontal')
+                # heat_color.set_label('Average Fidelity')
+
+            plt.xlabel(xlabel)
+            plt.ylabel(ylabel)
+            plt.title(title)
+            plt.legend()
+            plt.show()
+
+    if multiple_files and folder is not None:
+        os.chdir(folder)
+        files = sorted(glob.glob(file_stem))
+        for g in files:
+            data = genfromtxt(g, dtype=float, unpack=True)
+            data_graph(graph)
+    elif multiple_files and file_list:
+        if combine:
+            file_dictionary = {g: genfromtxt(g, dtype=float, unpack=True) for g in file_list}
+            data = combine_data(file_dictionary)
+            data_graph(graph)
+        else:
+            for g in file_list:
+                data = genfromtxt(g, dtype=float, unpack=True)
+                data_graph(graph)
+
     else:
-        return data_1, data_2
+        data = genfromtxt(f, dtype=float, unpack=True)
+        data_graph(graph)
+
+    if return_data:
+        retrieved = [data[k] for k in use_cols]
+        return retrieved
 
 
 def generateDictKeys(string, n,step=1):
@@ -263,6 +391,8 @@ def generatetensorstring(n, *args):
 
 def partial_trace(n, m, k):
     """
+    This is the partial trace operator
+
     :param n: Number of qubits in the system
     :param m: The position of the qubit to trace
     :param k: label for the kth basis for the traced out qubit, label begins from 1
@@ -363,7 +493,7 @@ def superkron(*args, val=0,  string=''):
     operators given the arguments i.e superkron(I,Z,X) will return the tensor product of I, Z and X.
     It can also do something more general. It can accept a dictionary of operators and a string variable
     that specifies in which order the operators in the dictionary should be tensored. E.G
-    operdict = {'0': I, '1': X} and  string = '010. Then superkron(operdict, val=1,string,)
+    operdict = {'0': I, '1': X} and  string = '010. Then superkron(operdict, val=1,string)
     produces tensor product superkron(I,X,I)
 
     :param args: List of operators to calculate tensor product of
@@ -383,11 +513,11 @@ def superkron(*args, val=0,  string=''):
     return out
 
 
-def computational_basis(q, n):
+def computational_basis(q, n, dict=False):
     """
-    :param n: type of qudit
+    :param n: type of qudit. Set n=2 for qubit
     :param q: Number of qubits
-    :return:
+    :return: List of one dimensional arrays corresponding to the computational basis states
     """
     zero = np.array([1, 0])
     one = np.array([0, 1])
@@ -487,28 +617,28 @@ def fidelity(rho, rho_1, error=False):
 
     return out
 
-
-def gatecompiler(file_prefix, unitary, num_bits):
-    """
-    :param file_prefix:
-    :param unitary
-    :param num_bits:
-    :return:
-    """
-
-    emb = CktEmbedder(num_bits, num_bits)
-    t = Tree(True, file_prefix, emb, unitary, verbose=False)
-    t.close_files()
-    style = 'exact'
-    MultiplexorExpander(file_prefix, num_bits, style)
-    DiagUnitaryExpander(file_prefix + '_X1', num_bits, style)
-    SEO_reader(file_prefix + '_X2', num_bits)
+#
+# def gatecompiler(file_prefix, unitary, num_bits):
+#     """
+#     :param file_prefix:
+#     :param unitary
+#     :param num_bits:
+#     :return:
+#     """
+#
+#     emb = CktEmbedder(num_bits, num_bits)
+#     t = Tree(True, file_prefix, emb, unitary, verbose=False)
+#     t.close_files()
+#     style = 'exact'
+#     MultiplexorExpander(file_prefix, num_bits, style)
+#     DiagUnitaryExpander(file_prefix + '_X1', num_bits, style)
+#     SEO_reader(file_prefix + '_X2', num_bits)
 
 
 def eigen(A):
     """
-    :param A:
-    :return:
+    :param A: This is matrix
+    :return: Returns the eigenvalues with corresponding eigen vectors
     """
     v, w = eig(A)
     shape_size = w.shape
@@ -529,7 +659,7 @@ def read_file(file, line_count=1, readline=None):
     with open(file, 'r') as f:
         if readline is None:
             line = f.read()
-            return line  # Possible error, may not want to use return statement
+            return line
         else:
             for i, lines in enumerate(f):
                 if i == readline-1:
@@ -561,46 +691,52 @@ def remove_line(file, string=[]):
                     clean = False
                 if clean is True:
                     new_f.write(line)
-    opsys.remove(file)
-    opsys.rename('tmp.txt', file)
+    os.remove(file)
+    os.rename('tmp.txt', file)
 
 
-def unitary_to_qasm(file_prefix1, u, n, unwanted_words):
+# def unitary_to_qasm(file_prefix1, u, n, unwanted_words):
+#     """
+#     :param file_prefix1:
+#     :param u:
+#     :param n:
+#     :param unwanted_words: remove lines which have unwanted words
+#     :return: name of file with qasm code
+#     """
+#     gatecompiler(file_prefix1, u, n)
+#     remove_line(file_prefix1 + '_X2_' + str(n) + '_eng.txt', unwanted_words)
+#     Qubiter_to_IBMqasm2_5q(file_prefix1 + '_X2', n, write_qubiter_files=True)
+#     return file_prefix1 + '_X2_' + 'qasm2.txt'
+
+
+def save_to_file(name='', **kwargs):
     """
-    :param file_prefix1:
-    :param u:
-    :param n:
-    :param unwanted_words: remove lines which have unwanted words
-    :return: name of file with qasm code
+    Write data to file in column format. Each keyword is a column
+    :param name: A string that is the name of the file to which the data will be written to
     """
-    gatecompiler(file_prefix1, u, n)
-    remove_line(file_prefix1 + '_X2_' + str(n) + '_eng.txt', unwanted_words)
-    Qubiter_to_IBMqasm2_5q(file_prefix1 + '_X2', n, write_qubiter_files=True)
-    return file_prefix1 + '_X2_' + 'qasm2.txt'
+    string = ''
+    for k in kwargs:
+        string += '{' + k + '}' + '      '
+    string += '\n'
+    file = open(name, 'a')
+    file.write(string.format(**kwargs))
+    file.close()
 
 
 if __name__ == '__main__':
-    k = [g.z(), g.y(), g.x()]
-    m = {'b1': g.b1(), 'b4': g.b4(), 'x': g.x()}
-    ghz = ss.ghz_state(2, '00', [1, 2])
-    cluster = ss.clusterstate(2, '00', [1, 2])
-    u = generateUnitary()
-    unitary = superkron(u, u)
-    e, v = eigen(g.x())
 
-    # print('list of matrices: ', k)
-    # print('Direct sum of matrices: ', direct_sum(k))
-    # print('string:', generatehamiltoniantring(5, '1', onestring=True, pos=2, pad= '3'))
-    # print('list of string :', generatehamiltoniantring(4, '1'))
-    # print('trace: ', fidelity(g.z(), g.y()))
-    # print('trace operator for first bath basis: ', partial_trace(2, 2, 1))
-    # print('tracing out operators: ', trace_qubits(2, g.z(), [2]))
-    # print('reduced density matrix of bell state: ', trace_qubits(2, ghz.state, [2]))
+    # a = read_file('/home/amara/Dropbox/Python Files/BQP2.5/projects/qvector_files/zero_state_ibm.qasm')
+    # print(a)
 
-    # gatecompiler('./Gate Compiler Files/random_example', unitary, 2)
-    # print('binary number 3, ', dec2base(3, 2))
-    # print('binary number 1, ', padded_dec2base(1, 2, 2))
-    # print('eigenvalues of sigma x: ', e)
-    # print('eigenvectors of sigma x:', v)
-    l = read_file('/home/amara/Python Files/qComputing/Gate Compiler Files/random_example_X2_2_eng.txt', readline=None)
-    print(l)
+    # unitary_to_qasm('/home/amara/Dropbox/Python Files/qComputing/Gate Compiler Files/x',
+    #                 g.cnot(),2, 'PHAS')
+    # file = '/home/amara/Dropbox/Python Files/Data/Qvector/average_fidelity/average_fidelity_5_17.txt'
+    # load_data(f=file, use_cols=[0, 1, 2], graph=True, contour=True, xlabel="units of $\pi/10$",
+    #           ylabel='units of $\pi/10$')
+    # print('List of computational basis state: ', computational_basis(3, 2))
+    # print('Labels for classical states: ', createlabel(3, 2))
+    from SpecialStates import ghz_state, clusterstate
+    ghz = ghz_state(3)
+    cluster = clusterstate(4)
+    reduce_ghz = trace_qubits(3, ghz.state, [1, 2])
+    print(reduce_ghz)
