@@ -6,8 +6,6 @@ import SpecialStates as ss
 from itertools import product
 
 
-
-
 def x():
     out = array([[0, 1], [1, 0]])
     return out
@@ -59,8 +57,13 @@ def r_z(theta):
 
 
 def r_i(theta):
-    out9 = expm(1j*theta*id())
+    out9 = expm(-1j*theta*id()/2)
     return out9
+
+
+def phase(theta):
+    out10 = array([[1, 0], [0, exp(1j*theta)]])
+    return out10
 
 
 def b1():
@@ -216,13 +219,18 @@ def multi_hadamard(n):
     return temp
 
 
-def pauli_group(n, full = False):
+def pauli_group(n, full=False, normalize=True):
     """
     :param n: number of qubits
-    :param full:
+    :param full: If true returns the full pauli group for n qubits including group elements that differ by center
+    of the group
+    :param normalize: If true returns pauli group elements so that group are normalized
     :return: Returns a dictionary of unitary representation of the single qubit pauli group
     """
-    pauli_matrix = {'I': id()/sqrt(2), 'X': x()/sqrt(2), 'Y': y()/sqrt(2), 'Z': z()/sqrt(2)}
+    if normalize:
+        pauli_matrix = {'I': id() / sqrt(2), 'X': x() / sqrt(2), 'Y': y() / sqrt(2), 'Z': z() / sqrt(2)}  
+    else:
+        pauli_matrix = {'I': id(), 'X': x(), 'Y': y(), 'Z': z()}
     center = {'i': 1j, '-i': -1j, '1': 1, '-1': -1}
     pauli_labels = [''.join(i) for i in product('IXYZ', repeat=n)]
     qubit_group = {}
@@ -241,8 +249,8 @@ def pauli_group(n, full = False):
 def pauli_expansion(rho, pauli_d):
     """
     Pauli terms contributing to density matrix rho
-    :param rho:
-    :param pauli_d:
+    :param rho: The density matrix for which you need the pauli expansion
+    :param pauli_d: The n qubit pauli group in which you write your density matrix expansion
     :return:
     """
 
@@ -255,19 +263,10 @@ def pauli_expansion(rho, pauli_d):
     return pauli_terms
 
 
-if __name__ == "__main__":
+   
 
-    # print('e_{21}: ', e_ij((2, 1), 1, 1))
-    # print('e_{12} :', e_ij((1, 2), 1, 2))
-    # print('controlled not : ', reversed_cu(x(), 3, 2, 1))
-    # print('pauli group of single qubit: ', pauli_group())
-    # print('swap gate: ', swap())
-    print(pauli_group(2))
 
-    # bell=ss.ghz_state(3, '000', [1, 2, 1, 3])
-    # cluster = ss.clusterstate(3, '000', [1, 2, 2, 3])
-    # c = pauli_expansion(bell.state,  b)
-    # d = pauli_expansion(cluster.state, b)
+
 
 
 
