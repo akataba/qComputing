@@ -2,7 +2,6 @@ import Gates as g
 import Operations as op
 import numpy as np
 from decimal import *
-getcontext().prec = 12
 
 
 def decohere(K, rho, n):
@@ -112,21 +111,31 @@ def kraus_ad(n, t, t1):
     return A
 
 
-def kraus_exact(n, t, t1, t2):
+def kraus_exact(n, t, t1, t2, markovian=False, alpha=None):
     """
     Produces the kraus matrices for the exact evolution of amplitude damping with dephasing channel
         :param n: number of qubit
         :param t: time step for evolution
         :param t1: relaxation time
         :param t2: dephasing time must be smaller than t1
+        :param markovian: If true the kraus matrices are for non markovian evolution and
+        t2 takes the role of  t_phi
+        :param alpha: The power of 1/f^{alpha} flux noise
         :return:  a 3 dimensinal array of kraus matrices with amplitude damping and dephasing
 
     """
 
     A = np.zeros((pow(3, n), pow(2, n), pow(2, n)), dtype=complex)  # 3 dimensional array to store kraus matrices
     gamma = 1 - np.exp(-t / t1)
-    t_phi = 1 / t2 - 1 / (2 * t1)
-    lambda1 = np.exp(-t / t1) * (1 - np.exp(-2 * (t / t_phi)))
+    if markovian:
+        t_phi = 1 / t2 - 1 / (2 * t1)
+        lambda1 = np.exp(-t / t1) * (1 - np.exp(-2 * (t / t_phi)))
+        print('We are markovian')
+    else:
+        t_phi = t2
+        lambda1 = np.exp(-t / t1) * (1 - np.exp(-2 * (t / t_phi)**(1 + alpha)))
+        print('We are non markovian')
+
     krausOperators = {
         "0": np.array([[1, 0], [0, np.sqrt(1 - gamma - lambda1)]]),
         "1": np.array([[0, np.sqrt(gamma)], [0, 0]]),
@@ -142,9 +151,3 @@ def kraus_exact(n, t, t1, t2):
         A[i] = temp
     return A
 
-
-def ad_lindbladoperator(n):
-    """
-    :param n: The number of qubits in the system experiencing amplitude damping
-    :return: Returns a list of such operators
-    """
