@@ -1,4 +1,5 @@
-from numpy import array, sqrt, kron, zeros, pi, dot, trace, asarray
+from numpy import array, sqrt, kron, zeros, pi, dot, trace, asarray, identity
+from numpy import testing,linalg
 import Operations as op
 from scipy.linalg import expm
 from cmath import exp
@@ -263,7 +264,54 @@ def pauli_expansion(rho, pauli_d):
     return pauli_terms
 
 
-   
+def stabilizer(stabilizer, ancilla_label=None, n=None):
+    """
+    Stabilizer must contain only X and Z operators
+
+    :param stabilizer: The stabilizer you want to measure
+    :param ancilla_label: The ancilla_label qubit used to measure the stabilizer
+    :param n: The number of data qubits in the circuit
+    :return: A unitary that represents a quantum circuit that is used to measure a specific stabilizer,
+    using CNOT and Hadamard gates
+    """
+
+    # The numbering of qubits starts from 1 rather than 0
+    stabilizer_dict = {}
+    oper_dict = {'0': id(), '1': h()}
+    unitary = identity(pow(2, n))
+    for counter, s in enumerate(stabilizer, 1):
+        if s == 'I' or s == 'i':
+            continue
+        else:
+            stabilizer_dict[counter] = s
+
+    for s in stabilizer_dict:
+        if stabilizer_dict[s] == 'Z' or stabilizer_dict[s] == 'z':
+            unitary = dot(unitary, c_u(x(), n, s, ancilla_label))
+        elif stabilizer_dict[s] == 'X' or stabilizer_dict[s] == 'x':
+            string = op.generatehamiltoniantring(n, '1', onestring=True, pos=s-1, pad='0')
+            unitary = dot(unitary, op.superkron(oper_dict, val=1, string=string))
+            unitary = dot(unitary, c_u(x(), n, s, ancilla_label))
+            unitary = dot(unitary, op.superkron(oper_dict, val=1, string=string))
+    return unitary
+
+
+if __name__ == '__main__':
+
+    d = stabilizer('XZ', ancilla_label=3, n=3)
+    print('Unitary from measure_stabilizer: ', d)
+    a = op.superkron(h(), id(), id())
+    b = op.superkron(id(), h(), id())
+    e = c_u(x(), 3, 1, 3)
+    f = c_u(x(), 3, 2, 3)
+    g = dot(a, dot(e, a))
+    i = dot(b, dot(f, b))
+    j = dot(f, g)
+
+    print('Unitary to check: ', j)
+    print('norm between matrices : ',  linalg.norm(d-j))
+
+
 
 
 
