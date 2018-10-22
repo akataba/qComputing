@@ -208,10 +208,10 @@ def generic_kraus(n, classical_error=False, opers=[], prob_error=[]):
     if classical_error:
         if len(prob_error) != 0 or len(prob_error) != len(opers):
             if math.isclose(sum(prob_error), 1, rel_tol=1e-4):
-                operators = {opers[i]: prob_error[i]*100 for i in range(len(prob_error))}
+                operators = {i: prob_error[i]*100 for i in range(len(prob_error))}
                 lea_object = pmf(operators)
                 picked_operator = lea_object.random()
-                return picked_operator
+                return opers[picked_operator]
             else:
                 raise Exception('Probabilities must add to 1')
         else:
