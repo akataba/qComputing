@@ -2,20 +2,47 @@ import Gates as g
 import Operations as op
 import numpy as np
 from decimal import *
+import multiprocessing as mp
+from lea import *
+from multiprocessing import Pool
+from functools import partial
+import math
+
+n_cpu = mp.cpu_count()  # We are getting the number of cores for any parallel method we shall need
 
 
 def decohere(K, rho, n):
     """
-    Carries out the kraus evolution of density matrix rho
-    :param K: An array containing the Kraus Matrices
-    :param rho: The density matrix to be evolved
-    :param n: The number of qqubits
-    :return: The evolved density matrix
+    :param K: List of kraus operators
+    :param rho: density matrix of system
+    :param n: Number of qubits
+    :return: Return evolved density matrix
     """
+    parts = 8
+    split_list = np.array_split(K, parts)
 
-    out = np.zeros((pow(2, n), pow(2, n)), dtype=complex)
-    for x in range(len(K)):
-        out += np.dot(K[x], np.dot(rho, op.ctranspose(K[x])))
+    with Pool(parts) as p:
+        par_kraus = partial(serial_decohere, rho_s=rho, n_s=n)
+        subout = p.map(par_kraus, split_list)
+        out_map = serial_decohere(subout, rho, n)
+        return out_map
+
+
+def serial_decohere(K, rho_s, n_s):
+    """
+    :param K: List of kraus operators
+    :param rho: density matrix of system
+    :param n: Number of qubits
+    :return: Return evolved density matrix
+    """
+    K = list(K)
+    out = np.zeros((pow(2, n_s), pow(2, n_s)), dtype=complex)
+    try:
+        assert type(K) == list
+        for i in range(len(K)):
+            out += np.dot(K[i], np.dot(rho_s, op.ctranspose(K[i])))
+    except:
+        raise TypeError('The input K must be a list of numpy arrays')
     return out
 
 
@@ -124,7 +151,6 @@ def kraus_exact(n, t, t1, t2, markovian=False, alpha=None):
         :return:  a 3 dimensinal array of kraus matrices with amplitude damping and dephasing
 
     """
-
     A = np.zeros((pow(3, n), pow(2, n), pow(2, n)), dtype=complex)  # 3 dimensional array to store kraus matrices
     gamma = 1 - np.exp(-t / t1)
     if markovian:
@@ -132,9 +158,9 @@ def kraus_exact(n, t, t1, t2, markovian=False, alpha=None):
         lambda1 = np.exp(-t / t1) * (1 - np.exp(-2 * (t / t_phi)))
         print('We are markovian')
     else:
-        t_phi = t2
-        lambda1 = np.exp(-t / t1) * (1 - np.exp(-2 * (t / t_phi)**(1 + alpha)))
         print('We are non markovian')
+        t_phi = t2
+        lambda1 = np.exp(-t / t1) * (1 - np.exp(-2 * (t / t_phi) ** (1 + alpha)))
 
     krausOperators = {
         "0": np.array([[1, 0], [0, np.sqrt(1 - gamma - lambda1)]]),
@@ -149,5 +175,48 @@ def kraus_exact(n, t, t1, t2, markovian=False, alpha=None):
         for digit in labels[i]:
             temp = np.kron(temp, krausOperators[digit])
         A[i] = temp
+
     return A
 
+
+def generic_kraus(n, classical_error=False, opers=[], prob_error=[]):
+    """
+    This functions takes as an input generic operators and outputs a corresponding list of kraus operators for those
+    n qubits. It also can do a classical simulation of noise by throwing down errors classically
+    :param n:  The number of qubits experiencing the noise
+    :param classical_error: If True the user must supply list of probabilities for list in oper
+    :param opers: The list of kraus operators that appear in the sum
+    :param prob_error: The list of probabilities for each operator in oper. Entries must add to 1. First operator is
+    returned with probability in first position of prob_error.
+    :return:
+    """
+
+    num_operators = len(opers)
+    A = np.zeros((pow(num_operators, n), pow(2, n), pow(2, n)), dtype=complex) # 3 dimensional array to store kraus matrices
+    if classical_error is False:
+        kraus_operators = {str(i): opers[i] for i in range(len(opers))}
+
+        labels = op.createlabel(n, num_operators)
+
+        for i in range(len(labels)):
+            temp=1
+            for digit in labels[i]:
+                temp = np.kron(temp, kraus_operators[digit])
+            A[i] = temp
+        return A
+
+    if classical_error:
+        if len(prob_error) != 0 or len(prob_error) != len(opers):
+            if math.isclose(sum(prob_error), 1, rel_tol=1e-4):
+                operators = {opers[i]: prob_error[i]*100 for i in range(len(prob_error))}
+                lea_object = pmf(operators)
+                picked_operator = lea_object.random()
+                return picked_operator
+            else:
+                raise Exception('Probabilities must add to 1')
+        else:
+            raise Exception('prob_error list is empty or does not equal oper list')
+
+
+if __name__ == '__main__':
+    pass
