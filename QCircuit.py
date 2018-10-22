@@ -13,11 +13,11 @@ for gates and get back the unitary operator for that gate
 
 
 class Circuit(object):
-    def __init__(self, state, n=3):
+    def __init__(self, state, n=3, measurement_qubits=None):
         """
         :param state: A string for the initial density matrix which will be used for the circuit
         """
-        self.qubits = q.Qubit(state)
+        self.qubits = q.Qubit(state, n, no_measurment_qubits=measurement_qubits)
         self.bucket = {}  # contains the string of functions for each step
         self.gate_list = {}  # contains a list of functions from the Gates module
         self.get_gates()  # adds "g." to string representation of function
@@ -45,6 +45,9 @@ class Circuit(object):
         :return:
         """
         if isinstance(step, str) and isinstance(gate_string, str):
+            for i in self.arg_bucket:
+                if step == i:
+                    raise Exception('There is an attempted duplication of step numbers')
             self.arg_bucket[step] = {}
             self.bucket[step] = list(gate_string.split(','))
             # if arg_list:
@@ -123,17 +126,18 @@ class Circuit(object):
 if __name__ == '__main__':
     # This should create a 3 qubit GHZ circuit
     xxx = op.superkron(g.x(), g.x(), g.x())
-    c = Circuit('000')
+    c = Circuit('000', measurement_qubits=3)
     c.add_step('0', 'h,id,id', arg_list=[[], [], []])
     c.add_step('1', 'c_u', arg_list=[[g.x(), 3, 1, 2]])
     c.add_step('2', 'c_u', arg_list=[[g.x(), 3, 2, 3]])
     c.apply_circuit()
     ghz = c.qubits.state
 
+
     # This should be a Toffoli gate circuit
 
-    d = Circuit('110')
-    d.add_step('0','x,id,id', arg_list=[[],[],[]])
+    d = Circuit('110', measurement_qubits=3)
+    d.add_step('0','x,id,id', arg_list=[[], [], []])
     d.add_step('1', 'id,id,r_y', arg_list=[[], [], [g.pi / 4]])
     d.add_step('2', 'c_u', arg_list=[[g.x(), 3, 2, 3]])
     d.add_step('3', 'id,id,r_y', arg_list=[[], [], [g.pi / 4]])
@@ -144,25 +148,35 @@ if __name__ == '__main__':
     d.add_step('8', 'id,id,r_y', arg_list=[[], [], [-g.pi / 4]])
     # print(d.circuit_unitary())
 
-    f = Circuit('00', n=2)
+    f = Circuit('00', n=2, measurement_qubits=2)
     f.add_step('0','id,phase', arg_list=[[], [-g.pi/2]])
     f.add_step('1','c_u', arg_list=[[g.x(), 2, 1, 2]])
     f.add_step('2','id,phase', arg_list=[[], [0]])
-    f.add_step('3', 'id,r_y', arg_list=[[],[-g.pi/2]])
+    f.add_step('3', 'id,r_y', arg_list=[[], [-g.pi/2]])
     f.add_step('4', 'c_u', arg_list=[[g.x(), 2, 1, 2]])
-    f.add_step('5', 'id,r_y', arg_list=[[],[g.pi/2]])
+    f.add_step('5', 'id,r_y', arg_list=[[], [g.pi/2]])
     f.add_step('6', 'id,phase', arg_list=[[], [g.pi/2]])
     # print(f.circuit_unitary())
 
     # Should create a three qubit cluster state
-    e = Circuit('000', n=3)
+    e = Circuit('000', n=3, measurement_qubits=3)
     e.add_step('0', 'h,h,h', arg_list=[[], [], []])
     e.add_step('1', 'c_u', arg_list=[[g.z(), 3, 1, 2]])
     e.add_step('2', 'c_u', arg_list=[[g.z(), 3, 2, 3]])
     e.apply_circuit()
     cluster = e.qubits.state
     # print(cluster)
-    print(np.trace(np.dot(xxx,cluster)))
+    # print(np.trace(np.dot(xxx, cluster)))
+
+    # 3 qubit ghz state with 2 ancilla
+    r = Circuit('00000', n=5, measurement_qubits=2)
+    r.add_step('0', 'h,id,id,id,id', arg_list=[[], [], [], [], []])
+    r.add_step('1', 'c_u', arg_list=[[g.x(), 5, 1, 2]])
+    r.add_step('2', 'c_u', arg_list=[[g.x(), 5, 2, 3]])
+    r.apply_circuit()
+    r.add_step('3', 'c_u', arg_list=[[g.x(), 5, 1, 4]])
+    r.apply_circuit()
+    print(r.qubits.classical_states)
 
 
 
